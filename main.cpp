@@ -41,6 +41,9 @@ void main()
   int dx = 0,dy = 0;
   // position to draw center tile
   int centerTileX,  centerTileY;
+  
+  // Find center tile
+  LatLon2Pixel(lat, lon, zoom, &pt);
     
   while(1)
   {
@@ -50,26 +53,31 @@ void main()
     switch(b)
     {
     case 1:
-      dx += 2;
+      scrlV(&pt, (signed char)15);
       break;
+      
     case 2:
-      dx -= 2;
+      scrlV(&pt, (signed char)-15);
       break;
+      
     case 3:
+      Pixel2LatLon(&pt, &lat, &lon);
       zoomIn(&zoom);
-      //dy += 2;
+      LatLon2Pixel(lat, lon, zoom, &pt);
       break;
+      
     case 4:
+      Pixel2LatLon(&pt, &lat, &lon);
       zoomOut(&zoom);
-      //dy -= 2;
+      LatLon2Pixel(lat, lon, zoom, &pt);
       break;
+      
     default:
       break;
     }
     Clear_Buttons();
     
-    // Find center tile
-    LatLon2Pixel(lat, lon, zoom, &pt);
+    
     GenerateTilePath(pt.tile_x, pt.tile_y,zoom, "SONAR", filepath);
     
     centerTileX = 136 - pt.tile_pixl_x;
@@ -137,3 +145,36 @@ void zoomOut(uint8_t* zoom)
     *zoom = MIN_ZOOM;
 }
 
+void scrlH(PIXELPOINT_T* pt, signed char dx)
+{
+  int px = pt->tile_pixl_x + (int)dx;
+  pt->pixl_x += (int)dx;
+  if(px > 255)
+  {
+    px-= 256;
+    pt->tile_x += 1;
+  }
+  if(px < 0)
+  {
+    px+= 256;
+    pt->tile_x -= 1;
+  }
+  pt->tile_pixl_x = px;
+}
+
+void scrlV(PIXELPOINT_T* pt, signed char dy)
+{
+  int t = pt->tile_pixl_y + (int)dy;
+  pt->pixl_y += (int)dy;
+  if(t > 255)
+  {
+    t-= 256;
+    pt->tile_y += 1;
+  }
+  if(t < 0)
+  {
+    t+= 256;
+    pt->tile_y -= 1;
+  }
+  pt->tile_pixl_y = t;
+}

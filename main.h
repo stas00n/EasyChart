@@ -22,5 +22,6 @@
 void LoadFromFile(char* filename, int x, int y);
 void zoomIn(uint8_t* zoom);
 void zoomOut(uint8_t* zoom);
-
+void scrlH(PIXELPOINT_T* pt, signed char dx); 
+void scrlV(PIXELPOINT_T* pt, signed char dy);
 #endif /* _MAIN_H_ */

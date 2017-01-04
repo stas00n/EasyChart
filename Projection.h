@@ -20,6 +20,7 @@ typedef struct
 }PIXELPOINT_T;
 
 void LatLon2Pixel(double lat, double lon, BYTE zoom, PIXELPOINT_T* pt);
+void Pixel2LatLon(PIXELPOINT_T* pt/*DWORD pixlX, DWORD pixlY*/, double* lat, double* lon);
 bool GenerateTilePath(DWORD x, DWORD y, BYTE zoom, char* rootDir, char* path);
 
 

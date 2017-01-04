@@ -20,6 +20,19 @@ void LatLon2Pixel(double lat, double lon, BYTE zoom, PIXELPOINT_T* pt)
   pt->tile_pixl_y = pt->pixl_y - (pt->tile_y << 8);
 }
 
+void Pixel2LatLon(PIXELPOINT_T* pt/*DWORD pixlX, DWORD pixlY*/, double* lat, double* lon)
+{
+  if(pt->pixls_total == 0) return;
+  double normX = ((double)pt->pixl_x) / pt->pixls_total;
+  double normY = ((double)pt->pixl_y) / pt->pixls_total;
+
+  *lon = 360 * (normX - 0.5);
+  double exponent = 12.5663706143592 * (0.5 - normY);// 4 * pi * 0.5 - normY
+  double A = exp(exponent); // A = e^(4 * pi * 0.5 - normY)
+
+  *lat = 57.29577951308232 * asin((A - 1) / (A + 1));// lat = asind()
+}
+
 bool GenerateTilePath(DWORD x, DWORD y, BYTE zoom, char* rootDir, char* path)
 {
   char str[20];
