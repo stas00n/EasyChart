@@ -6,6 +6,6 @@
 
 uint32_t Get_LE32(uint8_t* p32);
 uint32_t Get_BE32(uint8_t* p32);
-
+void _utoa( int value, char * string);
 
 #endif /* _UTILS_H_ */

@@ -11,9 +11,16 @@
 #include "gpioex.h"
 #include "myf.h"
 #include "buttons.h"
+#include "Projection.h"
 
+
+
+// Application defines
+#define MAX_ZOOM        18
+#define MIN_ZOOM        3
 
 void LoadFromFile(char* filename, int x, int y);
-
+void zoomIn(uint8_t* zoom);
+void zoomOut(uint8_t* zoom);
 
 #endif /* _MAIN_H_ */

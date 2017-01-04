@@ -2114,10 +2114,19 @@
     <name>$PROJ_DIR$\periph.h</name>
   </file>
   <file>
+    <name>$PROJ_DIR$\Projection.cpp</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\Projection.h</name>
+  </file>
+  <file>
     <name>$PROJ_DIR$\stm32f0xx_conf.h</name>
   </file>
   <file>
     <name>$PROJ_DIR$\timecrit.s</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\wintypes.h</name>
   </file>
 </project>
 

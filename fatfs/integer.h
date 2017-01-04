@@ -17,8 +17,9 @@ typedef unsigned __int64 QWORD;
 /* These types MUST be 16-bit or 32-bit */
 typedef int				INT;
 typedef unsigned int	UINT;
-typedef bool	BOOL;
-
+#ifndef BOOL
+typedef int	BOOL;
+#endif
 /* This type MUST be 8-bit */
 typedef unsigned char	BYTE;
 
@@ -34,8 +35,13 @@ typedef unsigned long	DWORD;
 /* This type MUST be 64-bit (Remove this for C89 compatibility) */
 typedef unsigned long long QWORD;
 
+#ifndef TRUE
 #define TRUE true
+#endif
+
+#ifndef FALSE
 #define FALSE false
+#endif
 
 #endif
 
