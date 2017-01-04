@@ -62,7 +62,7 @@ void CLCD::MemRect(CRect* rect, uint16_t* mem)
   uint32_t nPixels = rect->width * rect->height;
   SetColumnAddress(rect->left, rect->left + rect->width - 1);
   SetPageAddress(rect->top, rect->top + rect->height - 1);
-  WriteCom(0x2C);
+  WriteMemoryStart();
   
     
   for(uint32_t i = 0; i < nPixels; i++)
@@ -77,9 +77,50 @@ void CLCD::DrawBitmap(CRect* rect, uint16_t* bm)
   uint32_t nPixels = rect->width * rect->height;
   SetColumnAddress(rect->left, rect->left + rect->width - 1);
   SetPageAddress(rect->top, rect->top + rect->height - 1);
-  WriteCom(0x2C);
+  WriteMemoryStart();
 
   WritePixelsBitmap2(bm, nPixels, GPIOC_BASE);
+}
+
+void CLCD::ReadBitmap(CRect* rect, uint16_t* bm)
+{
+  uint32_t nPixels = rect->width * rect->height;
+  SetColumnAddress(rect->left, rect->left + rect->width - 1);
+  SetPageAddress(rect->top, rect->top + rect->height - 1);
+  ReadMemoryStart();
+
+  GPIOLCD->MODER &= 0xFFFF0000;
+  // Dummy read
+  GPIO_ResetPin(PIN_LCD_RD);
+  GPIO_SetPin(PIN_LCD_RD);
+  
+  uint8_t b;
+  uint16_t w;
+  for(uint32_t i = 0; i < nPixels; i++)
+  {
+    GPIO_ResetPin(PIN_LCD_RD);
+    GPIO_SetPin(PIN_LCD_RD);
+    b = (uint8_t)(GPIOLCD->IDR);
+    b >>= 3;
+    w = b << 11;
+    
+    GPIO_ResetPin(PIN_LCD_RD);
+    GPIO_SetPin(PIN_LCD_RD);
+    b = (uint8_t)(GPIOLCD->IDR);
+    b >>= 2;
+    w |= b << 5;
+    
+    
+    GPIO_ResetPin(PIN_LCD_RD);
+    GPIO_SetPin(PIN_LCD_RD);
+    b = (uint8_t)(GPIOLCD->IDR);
+    b >>= 3;
+    w |= b;
+    *bm = w;
+    
+    bm++;
+  }
+  GPIOLCD->MODER |= 0x5555;
 }
 
 void CLCD::WriteCom(uint8_t com)
@@ -109,4 +150,73 @@ void CLCD::Clear(uint16_t color)
   rect.top = DISP_PAGE_MIN;
   rect.height = DISP_HEIGHT;
   FillRect(&rect, color);
+}
+
+CSprite::CSprite()
+  {
+    _bmbkg = _bm = NULL;
+    _bkgCaptured = false;
+  }
+CSprite::~CSprite()
+  {
+    if(_bmbkg != NULL)
+      free(_bmbkg);
+  }
+bool CSprite::Create(uint8_t width, uint8_t height, uint16_t* bm)
+{
+  _bmbkg = (uint16_t*)malloc(width * height);
+  if(_bmbkg == NULL)
+    return false;
+  _width = width;
+  _height = height;
+  _bkgCaptured = false;
+  _bm = bm;
+  return true;
+}
+
+void CLCD::DrawSprite(CSprite* sprite, int x, int y)
+{
+  CRect r;
+  r.width = sprite->_width;
+  r.height = sprite->_height;
+  
+  if(sprite->_bkgCaptured)
+  {
+    r.left = sprite->_x;
+    r.top = sprite->_y;
+    MemRect(&r, sprite->_bmbkg);
+  }
+  else
+  {
+    sprite->_x = r.left = x;
+    sprite->_y = r.top = y;
+    ReadBitmap(&r, sprite->_bmbkg);
+    sprite->_bkgCaptured = true;
+  }
+  
+  if(sprite->_bm)
+  {
+    sprite->_x = r.left = x;
+    sprite->_y = r.top = y;
+    ReadBitmap(&r, sprite->_bmbkg);
+    MemRect(&r, sprite->_bm);
+  }
+  
+  
+
+}
+
+void CLCD::ClearSprite(CSprite* sprite)
+{
+  CRect r;
+  r.width = sprite->_width;
+  r.height = sprite->_height;
+  
+  if(sprite->_bkgCaptured)
+  {
+    r.left = sprite->_x;
+    r.top = sprite->_y;
+    MemRect(&r, sprite->_bmbkg);
+  }
+  sprite->_bkgCaptured = false;
 }

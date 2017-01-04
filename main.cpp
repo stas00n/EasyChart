@@ -44,7 +44,8 @@ void main()
   
   // Find center tile
   LatLon2Pixel(lat, lon, zoom, &pt);
-    
+  CSprite sp;
+  sp.Create(30, 30, (uint16_t*)0x20000040);  
   while(1)
   {
 
@@ -108,6 +109,13 @@ void main()
         LoadFromFile(filepath, dx + centerTileX + 256 * tx, dy + centerTileY + 256 * ty);
       }
     }
+    for(int i = 0; i < 100; i++)
+    {
+    lcd.DrawSprite(&sp, 100+i, 210);
+    //lcd.DrawSprite(&sp, 200, 210);
+    __delay(30000);
+    }
+    lcd.ClearSprite(&sp);
   }
 }
 

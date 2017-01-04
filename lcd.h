@@ -2,6 +2,7 @@
 #define _LCD_H_
 
 #include <stdint.h>
+#include <stdlib.h>
 #include "stm32f0xx.h"
 #include "hardware.h"
 #include "gpioex.h"
@@ -27,6 +28,29 @@ public:
   uint16_t height;
 };
 
+class CSprite
+{
+public:
+  
+  uint8_t _width;
+  uint8_t _height;
+
+  uint16_t* _bm;
+  uint16_t _trColor;
+  int _x;
+  int _y;
+  
+//private:
+    uint16_t* _bmbkg;
+    bool      _bkgCaptured;
+    
+public:
+  CSprite();
+  ~CSprite();
+  bool Create(uint8_t width, uint8_t height, uint16_t* bm = NULL);
+  
+};
+
 class CLCD
 {
 public:
@@ -43,9 +67,15 @@ public:
   
   inline void WriteMemoryStart(){WriteCom(0x2C);}
   inline void WriteMemoryContinue(){WriteCom(0x3C);}
+  inline void ReadMemoryStart(){WriteCom(0x2E);}
+  inline void ReadMemoryContinue(){WriteCom(0x3E);}
   void FillRect(CRect* rect, uint16_t pColor);
   void MemRect(CRect* rect, uint16_t* mem);
   void DrawBitmap(CRect* rect, uint16_t* bm);
+  void ReadBitmap(CRect* rect, uint16_t* bm);
+  
+  void DrawSprite(CSprite* sprite, int x, int y);
+  void ClearSprite(CSprite* sprite);
 
 };
 
