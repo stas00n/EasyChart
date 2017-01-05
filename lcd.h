@@ -31,24 +31,22 @@ public:
 class CSprite
 {
 public:
+  uint8_t       _width;
+  uint8_t       _height;
+  uint16_t      _trColor;
+  int           _x;
+  int           _y;
+  uint16_t*     _bm;
+  uint16_t*     _bmbkg;
+  uint16_t*     _bmov;
+  bool          _bkgCaptured;
   
-  uint8_t _width;
-  uint8_t _height;
-
-  uint16_t* _bm;
-  uint16_t _trColor;
-  int _x;
-  int _y;
-  
-//private:
-    uint16_t* _bmbkg;
-    bool      _bkgCaptured;
-    
 public:
   CSprite();
   ~CSprite();
   bool Create(uint8_t width, uint8_t height, uint16_t* bm = NULL);
-  
+  void Destroy();
+  void Overlay();
 };
 
 class CLCD

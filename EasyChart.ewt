@@ -2159,6 +2159,9 @@
   </group>
   <group>
     <name>Pictures</name>
+    <file>
+      <name>$PROJ_DIR$\Sprites\up.c</name>
+    </file>
   </group>
   <group>
     <name>SPL</name>

@@ -1,7 +1,7 @@
 #include "main.h"
 #include "ff.h"
 
-
+extern const unsigned short up[];
 const int bufsize = 2048;
 
 CLCD lcd;
@@ -29,7 +29,7 @@ void main()
   PIXELPOINT_T pt;
   
   char filepath[MAX_PATH];
- // GenerateTilePath(pt.tile_x, pt.tile_y,zoom, "SONAR", filepath);
+
 //  int dx = 0;
 //  CRect rect;
 //  rect.left = dx+14;
@@ -38,14 +38,19 @@ void main()
 //  rect.height = 480;
   
   lcd.Clear();
-  int dx = 0,dy = 0;
-  // position to draw center tile
+
+  // Center tile origin
   int centerTileX,  centerTileY;
   
   // Find center tile
   LatLon2Pixel(lat, lon, zoom, &pt);
+  
+  // Create sprite
   CSprite sp;
-  sp.Create(30, 30, (uint16_t*)0x20000040);  
+  sp.Create(20, 20, (uint16_t*)up);
+  // Set sprite transparent color
+  sp._trColor = 0;
+  
   while(1)
   {
 
@@ -83,7 +88,6 @@ void main()
     
     centerTileX = 136 - pt.tile_pixl_x;
     centerTileY = 240 - pt.tile_pixl_y;
-   // LoadFromFile(filepath, dx + centerTileX, dy + centerTileY);
     
     int toLeft;
     if(centerTileX > 0) toLeft = -1;
@@ -106,14 +110,15 @@ void main()
       for (int ty = upper; ty <= lower; ty++)
       {
         GenerateTilePath(pt.tile_x + tx, pt.tile_y + ty,zoom, "SONAR", filepath);
-        LoadFromFile(filepath, dx + centerTileX + 256 * tx, dy + centerTileY + 256 * ty);
+        LoadFromFile(filepath, centerTileX + 256 * tx, centerTileY + 256 * ty);
       }
     }
+    
+    // Sprite drawing test:
     for(int i = 0; i < 100; i++)
     {
-    lcd.DrawSprite(&sp, 100+i, 210);
-    //lcd.DrawSprite(&sp, 200, 210);
-    __delay(30000);
+      lcd.DrawSprite(&sp, 100 + i, 210);
+      __delay(100000);
     }
     lcd.ClearSprite(&sp);
   }

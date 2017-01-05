@@ -161,17 +161,48 @@ CSprite::~CSprite()
   {
     if(_bmbkg != NULL)
       free(_bmbkg);
+    if(_bmov != NULL)
+      free(_bmov);
   }
 bool CSprite::Create(uint8_t width, uint8_t height, uint16_t* bm)
 {
-  _bmbkg = (uint16_t*)malloc(width * height);
+  _bmbkg = (uint16_t*)malloc(width * height * 2);
   if(_bmbkg == NULL)
     return false;
+  _bmov = (uint16_t*)malloc(width * height * 2);
+  if(_bmov == NULL)
+    return false;
+  
   _width = width;
   _height = height;
   _bkgCaptured = false;
   _bm = bm;
   return true;
+}
+
+void CSprite::Destroy()
+{
+  if(_bmbkg != NULL)
+    free(_bmbkg);
+  if(_bmov != NULL)
+    free(_bmov);
+  _bmbkg = NULL;
+  _bmov = NULL;
+  _width = 0;
+  _height = 0;
+}
+
+void CSprite::Overlay()
+{
+  uint32_t n = _width * _height;
+  uint16_t trcol = _trColor;
+  while(n--)
+  {
+    if(_bm[n] != trcol)
+      _bmov[n] = _bm[n];
+    else
+      _bmov[n] = _bmbkg[n];
+  }
 }
 
 void CLCD::DrawSprite(CSprite* sprite, int x, int y)
@@ -199,11 +230,9 @@ void CLCD::DrawSprite(CSprite* sprite, int x, int y)
     sprite->_x = r.left = x;
     sprite->_y = r.top = y;
     ReadBitmap(&r, sprite->_bmbkg);
-    MemRect(&r, sprite->_bm);
+    sprite->Overlay();
+    MemRect(&r, sprite->_bmov);
   }
-  
-  
-
 }
 
 void CLCD::ClearSprite(CSprite* sprite)
