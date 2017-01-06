@@ -79,7 +79,7 @@ public:
   inline void ReadMemoryStart(){WriteCom(0x2E);}
   inline void ReadMemoryContinue(){WriteCom(0x3E);}
   
-  //int SetDrawRect(Crect* rect);
+  int SetDrawRect(CRect* rect);
   void FillRect(CRect* rect, uint16_t pColor);
   void MemRect(CRect* rect, uint16_t* mem);
   void DrawBitmap(CRect* rect, uint16_t* bm);
@@ -104,7 +104,7 @@ extern "C" {
 
 void WritePixel(uint16_t* pPixel);  
 void WritePixels(uint16_t pixel, uint32_t nPixels/*, uint32_t GPIOx_BASE*/);
-void WritePixelsBitmap(uint16_t* bm, uint32_t nPixels, uint32_t GPIOx_BASE);
+void WritePixelsBitmap(uint16_t* bm, uint32_t nPixels/*, uint32_t GPIOx_BASE*/);
 void WritePixelsBitmap2(uint16_t* bm, uint32_t nPixels, uint32_t GPIOx_BASE);
 #ifdef __cplusplus
 }

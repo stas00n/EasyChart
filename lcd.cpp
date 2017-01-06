@@ -43,6 +43,20 @@ void CLCD::SetPageAddress(uint16_t startPg, uint16_t endPg)
   WriteData((uint8_t)endPg);
 }
 
+int CLCD::SetDrawRect(CRect* rect)
+{
+  // TODO: Validate boundaries
+  //int ret;
+  int s, e;
+  s = rect->left + DISP_COL_OFFSET;
+  e = s + rect->width - 1;
+  SetColumnAddress(s, e);
+  s = rect->top + DISP_PAGE_OFFSET;
+  e = s + rect->height - 1;
+  SetPageAddress(s, e);
+  return 1;//ret;
+}
+
 void CLCD::FillRect(CRect* rect, uint16_t color)
 {
   uint32_t nPixels = rect->width * rect->height;
@@ -257,30 +271,51 @@ void CLCD::PutChar(char c, int x, int y)
   r.top = y;
   r.width = _font->width;
   r.height = _font->height;
+  SetDrawRect(&r);
   uint16_t n = _font->width * _font->height;
   uint8_t t;
-  //uint16_t* bm = new uint16_t[n];
-  uint16_t* bm = (uint16_t*)malloc(n << 1);
-  if(bm == NULL) return;
-  memset16(bm, _bkCol, n);
+  uint16_t pixels[8];
+  WriteMemoryStart();
   for(uint32_t i = 0; i < (n >> 3); i++)
   {
     t = *((uint8_t*)_font + 4 + i + (c - _font->offset) * _font->height * (_font->width >> 3));
     for(uint8_t j = 0; j < 8; j++)
     {
-      if(t & 0x80) bm[(i << 3) + j] = _penCol;
+      if(t & 0x80) pixels[j] = _penCol;
+      else pixels[j] = _bkCol;
       t <<= 1;
     }
+    WritePixelsBitmap(pixels, 8);
   }
-  MemRect(&r, bm);
-  free(bm);
 }
 
 void CLCD::Print(char* str, int x, int y)
 {
+  int X = x;
   while (char c = *(str++))
   {
-    PutChar(c, x, y);
-    x += _font->width;
+    // Detect <CR>
+    if(c == '\r') 
+    {
+      X = x;
+      continue;
+    }
+    
+    // Detect <LF>
+    if(c == '\n')
+    {
+      y += _font->height;
+      continue;
+    }
+    
+    PutChar(c, X, y);
+    X += _font->width;
+    
+    // Auto <CR><LF>
+    if(X + _font->width > DISP_WIDTH)
+    {
+      X = x;
+      y += _font->height;
+    }
   }
 }

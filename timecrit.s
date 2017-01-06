@@ -35,6 +35,7 @@ _exit1
   PUBLIC WritePixelsBitmap
 WritePixelsBitmap       ;(uint16_t* bm, uint32_t nPixels, uint32_t GPIOx_BASE);
   
+  ldr           r2, =0x48000800/*GPIOC_BASE*/
   push          {r4}
   movs          r3, #1                  ;load BSRR value
   lsls          r3, r3, #8

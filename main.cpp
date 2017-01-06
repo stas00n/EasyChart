@@ -45,11 +45,16 @@ void main()
   // Print() test
   while(1)
   {
+    lcd._font = (font_t*)SmallFont;
+    lcd.Print("\
+      MultiLine Printing Test.    \r\n\n\
+Printing end of line now detected, so you may try to print wide strings with \
+auto return. TODO: Eliminate leading space after auto return", 0, 90);
     lcd._font = (font_t*)BigFont;
-    lcd.Print("Hello, World!", 50, 200);
+    lcd.Print("Hello, World!", 30, 200);
     lcd._font = (font_t*)SevenSegNumFont;
-    lcd.Print("1234", 50, 240);
-    lcd.Clear(0x1f);
+    lcd.Print("1234", 60, 240);
+    lcd.Clear(0x3e0);
   }
   // Center tile origin
   int centerTileX,  centerTileY;
