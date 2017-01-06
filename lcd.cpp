@@ -289,6 +289,47 @@ void CLCD::PutChar(char c, int x, int y)
   }
 }
 
+void CLCD::PutCharTransparent(char c, int x, int y)
+{
+  CRect r;
+  r.left = x;
+  r.top = y;
+  r.width = 8;//_font->width;
+  r.height = 1;//_font->height;
+  //SetDrawRect(&r);
+  uint16_t n = _font->width * _font->height;
+  uint8_t t;
+  uint16_t pixels[8];
+  uint8_t n2 = 0;
+  //ReadMemoryStart();
+  //ReadPixels();
+  WriteMemoryStart();
+  for(uint32_t i = 0; i < (n >> 3); i++)
+  {
+    SetDrawRect(&r);
+    ReadMemoryStart();
+    ReadPixels(pixels, 8);
+    t = *((uint8_t*)_font + 4 + i + (c - _font->offset) * _font->height * (_font->width >> 3));
+    for(uint8_t j = 0; j < 8; j++)
+    {
+      if(t & 0x80) pixels[j] = _penCol;
+     // else pixels[j] = _bkCol;
+      t <<= 1;
+      n2++;
+    }
+    SetDrawRect(&r);
+    WriteMemoryStart();
+    WritePixelsBitmap(pixels, 8);
+    r.left+=8;
+    if(n2 >= _font->width)
+    {
+      r.top++;
+      r.left = x;
+      n2 = 0;
+    }
+  }
+}
+
 void CLCD::Print(char* str, int x, int y)
 {
   int X = x;
@@ -308,7 +349,8 @@ void CLCD::Print(char* str, int x, int y)
       continue;
     }
     
-    PutChar(c, X, y);
+    //PutChar(c, X, y);
+    PutCharTransparent(c, X, y);
     X += _font->width;
     
     // Auto <CR><LF>
@@ -318,4 +360,54 @@ void CLCD::Print(char* str, int x, int y)
       y += _font->height;
     }
   }
+}
+
+void CLCD::ReadPixels(uint16_t* buf, uint32_t nPixels)
+{
+//  uint32_t nPixels = rect->width * rect->height;
+//  SetColumnAddress(rect->left, rect->left + rect->width - 1);
+//  SetPageAddress(rect->top, rect->top + rect->height - 1);
+//  ReadMemoryStart();
+//  ReadMemoryContinue();
+  GPIOLCD->MODER &= 0xFFFF0000;
+  // Dummy read
+  GPIO_ResetPin(PIN_LCD_RD);
+  GPIO_SetPin(PIN_LCD_RD);
+  
+//  GPIO_ResetPin(PIN_LCD_RD);
+//  GPIO_SetPin(PIN_LCD_RD);
+//  
+//  GPIO_ResetPin(PIN_LCD_RD);
+//  GPIO_SetPin(PIN_LCD_RD);
+//  
+//  GPIO_ResetPin(PIN_LCD_RD);
+//  GPIO_SetPin(PIN_LCD_RD);
+  
+  
+  uint8_t b;
+  uint16_t w;
+  for(uint32_t i = 0; i < nPixels; i++)
+  {
+    GPIO_ResetPin(PIN_LCD_RD);
+    GPIO_SetPin(PIN_LCD_RD);
+    b = (uint8_t)(GPIOLCD->IDR);
+    b >>= 3;
+    w = b << 11;
+    
+    GPIO_ResetPin(PIN_LCD_RD);
+    GPIO_SetPin(PIN_LCD_RD);
+    b = (uint8_t)(GPIOLCD->IDR);
+    b >>= 2;
+    w |= b << 5;
+    
+    
+    GPIO_ResetPin(PIN_LCD_RD);
+    GPIO_SetPin(PIN_LCD_RD);
+    b = (uint8_t)(GPIOLCD->IDR);
+    b >>= 3;
+    w |= b;
+    
+    *(buf++) = w;
+  }
+  GPIOLCD->MODER |= 0x5555;
 }

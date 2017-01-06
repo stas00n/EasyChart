@@ -8,7 +8,7 @@ CLCD lcd;
 CMYF myf;
 uint8_t* buf;
 
-void main()
+ void main()
 {
   Clock_Config();
   GPIO_Config();
@@ -32,11 +32,11 @@ void main()
   char filepath[MAX_PATH];
 
 //  int dx = 0;
-//  CRect rect;
-//  rect.left = dx+14;
-//  rect.width = 2;
-//  rect.top = 0;
-//  rect.height = 480;
+  CRect rect;
+//  rect.left = 60;
+//  rect.width = 200;
+//  rect.top = 40;
+//  rect.height = 1;
   
   lcd.Clear();
   
@@ -45,16 +45,29 @@ void main()
   // Print() test
   while(1)
   {
+    rect.left = 24;
+    rect.width = 272;
+    rect.top = 0;
+    rect.height = 10;
+    uint16_t c = 416;
+    for(uint8_t i = 0; i < 48; i++)
+    {
+      lcd.FillRect(&rect, c);
+      c += 32;
+      rect.top+=10;
+    }
+    
     lcd._font = (font_t*)SmallFont;
-    lcd.Print("\
-      MultiLine Printing Test.    \r\n\n\
-Printing end of line now detected, so you may try to print wide strings with \
-auto return. TODO: Eliminate leading space after auto return", 0, 90);
+    lcd.Print("TRANSPARENT PRINTING", 60, 40);
+
     lcd._font = (font_t*)BigFont;
-    lcd.Print("Hello, World!", 30, 200);
+    lcd.Print("Transparent printing in this version is good way to waste CPU\
+ time due to huge amount of short LCD read/write operations. This feature\
+ is subject of optimization in future versions.", 0, 140);
     lcd._font = (font_t*)SevenSegNumFont;
-    lcd.Print("1234", 60, 240);
-    lcd.Clear(0x3e0);
+    lcd._penCol = 0;
+    lcd.Print("1234", 60, 210);
+    lcd._penCol = 0xffff;
   }
   // Center tile origin
   int centerTileX,  centerTileY;
