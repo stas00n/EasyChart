@@ -2260,6 +2260,9 @@
     <name>$PROJ_DIR$\fatfs\buttons.h</name>
   </file>
   <file>
+    <name>$PROJ_DIR$\Fonts\DefaultFonts.c</name>
+  </file>
+  <file>
     <name>$PROJ_DIR$\fatfs\dmaread.c</name>
   </file>
   <file>

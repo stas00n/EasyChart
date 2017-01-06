@@ -1,5 +1,5 @@
 #include "lcd.h"
-#include "Timing.h"
+
   
 CLCD::CLCD(){;}
 CLCD::~CLCD(){;}
@@ -248,4 +248,39 @@ void CLCD::ClearSprite(CSprite* sprite)
     MemRect(&r, sprite->_bmbkg);
   }
   sprite->_bkgCaptured = false;
+}
+
+void CLCD::PutChar(char c, int x, int y)
+{
+  CRect r;
+  r.left = x;
+  r.top = y;
+  r.width = _font->width;
+  r.height = _font->height;
+  uint16_t n = _font->width * _font->height;
+  uint8_t t;
+  //uint16_t* bm = new uint16_t[n];
+  uint16_t* bm = (uint16_t*)malloc(n << 1);
+  if(bm == NULL) return;
+  memset16(bm, _bkCol, n);
+  for(uint32_t i = 0; i < (n >> 3); i++)
+  {
+    t = *((uint8_t*)_font + 4 + i + (c - _font->offset) * _font->height * (_font->width >> 3));
+    for(uint8_t j = 0; j < 8; j++)
+    {
+      if(t & 0x80) bm[(i << 3) + j] = _penCol;
+      t <<= 1;
+    }
+  }
+  MemRect(&r, bm);
+  free(bm);
+}
+
+void CLCD::Print(char* str, int x, int y)
+{
+  while (char c = *(str++))
+  {
+    PutChar(c, x, y);
+    x += _font->width;
+  }
 }

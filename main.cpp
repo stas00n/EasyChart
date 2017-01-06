@@ -13,6 +13,7 @@ void main()
   Clock_Config();
   GPIO_Config();
   
+  
   Buttons_Init();
   lcd.Init();
   
@@ -38,7 +39,18 @@ void main()
 //  rect.height = 480;
   
   lcd.Clear();
-
+  
+  lcd._bkCol = 0xF800;
+  lcd._penCol = 0xFFFF;
+  // Print() test
+  while(1)
+  {
+    lcd._font = (font_t*)BigFont;
+    lcd.Print("Hello, World!", 50, 200);
+    lcd._font = (font_t*)SevenSegNumFont;
+    lcd.Print("1234", 50, 240);
+    lcd.Clear(0x1f);
+  }
   // Center tile origin
   int centerTileX,  centerTileY;
   

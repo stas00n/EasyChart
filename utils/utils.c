@@ -33,3 +33,20 @@ void _utoa( int value, char * string)
   strcpy(string, ++p);
 }
 
+void memset16(void* memptr, uint16_t val, size_t num)
+{
+  uint32_t* p32 = (uint32_t*)memptr;
+  uint32_t n = num >> 1;
+  uint32_t v32 = ((val << 16) | val);
+  while(n--)
+  {
+    *(p32++) = v32;
+  }
+  n = num - ((num >> 1) << 1);
+  uint16_t* p16 = (uint16_t*)p32;
+  while(n--)
+  {
+    *(p16++) = val;
+  }
+}
+

@@ -6,6 +6,9 @@
 #include "stm32f0xx.h"
 #include "hardware.h"
 #include "gpioex.h"
+#include "utils.h"
+#include "Timing.h"
+#include "Fonts/DefaultFonts.h"
 
 
 //  screen area desription
@@ -18,6 +21,14 @@
 #define DISP_COL_MAX    (DISP_COL_OFFSET + DISP_WIDTH - 1)
 #define DISP_PAGE_MIN   DISP_PAGE_OFFSET
 #define DISP_PAGE_MAX   (DISP_PAGE_OFFSET + DISP_HEIGHT - 1)
+
+typedef struct
+{
+  uint8_t width;
+  uint8_t height;
+  uint8_t offset;
+  uint8_t numchars;
+}font_t;
 
 class CRect
 {
@@ -67,13 +78,22 @@ public:
   inline void WriteMemoryContinue(){WriteCom(0x3C);}
   inline void ReadMemoryStart(){WriteCom(0x2E);}
   inline void ReadMemoryContinue(){WriteCom(0x3E);}
+  
+  //int SetDrawRect(Crect* rect);
   void FillRect(CRect* rect, uint16_t pColor);
   void MemRect(CRect* rect, uint16_t* mem);
   void DrawBitmap(CRect* rect, uint16_t* bm);
   void ReadBitmap(CRect* rect, uint16_t* bm);
+  void PutChar(char c, int x, int y);
+  void Print(char* str, int x, int y);
   
   void DrawSprite(CSprite* sprite, int x, int y);
   void ClearSprite(CSprite* sprite);
+  
+public:
+  font_t* _font;
+  uint16_t _bkCol;
+  uint16_t _penCol;
 
 };
 
