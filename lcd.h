@@ -86,7 +86,7 @@ public:
   void ReadBitmap(CRect* rect, uint16_t* bm);
   void ReadPixels(uint16_t* buf, uint32_t nPixels);
   void PutChar(char c, int x, int y);
-  //void PutCharTransparent(char c, int x, int y);
+  void PutCharTransparent(char c, int x, int y);
   //void Print(char* str, int x, int y);
   void Print(char* str, int x, int y, int* strkern = NULL);
   void DrawSprite(CSprite* sprite, int x, int y);

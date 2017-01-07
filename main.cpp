@@ -41,29 +41,34 @@ uint8_t* buf;
   lcd.Clear();
   lcd._font = (FONT_INFO*)&arialNarrow_10ptFontInfo;
   lcd._bkCol = 0xFFFF;
-  lcd._penCol = 0;
+  lcd._penCol = 0xffff;
   // Print() test
   while(1)
   {
-   // Gradient fill
-//    rect.left = 24;
-//    rect.width = 272;
-//    rect.top = 0;
-//    rect.height = 10;
-//    uint16_t c = 416;
-//    for(uint8_t i = 0; i < 48; i++)
-//    {
-//      lcd.FillRect(&rect, c);
-//      c += 32;
-//      rect.top+=10;
-//    }
+    //  Gradient fill
+    rect.left = 24;
+    rect.width = 272;
+    rect.top = 0;
+    rect.height = 10;
+    uint16_t c = 416;
+    for(uint8_t i = 0; i < 48; i++)
+    {
+      lcd.FillRect(&rect, c);
+      c += 32;
+      rect.top+=10;
+    }
     
-    lcd.Clear(0xFFFF);
+//    lcd.Clear(0xFFFF);
     lcd.Print("Шрифт Arial Narrow Bold, 10\r\nВозможность ручного кернинга.", 26, 40);
     int kern[] = {-2,0,0,0,-1,-2,0,0,0,0,-1,0,-1,0,0,0,0,0,0,0,0};
+    
     lcd.Print("ГДЕ ЭТА СВОЛОЧЬ?", 55, 200);
     lcd.Print("ГДЕ ЭТА СВОЛОЧЬ?", 55, 230, kern);
-                  
+    
+    lcd.Print("Тест прозрачного фона текста", 20,250);
+    lcd._penCol = 0x10;
+    lcd.Print("Тест прозрачного фона текста", 25,255); 
+    lcd._penCol = 0xFFFF;
   }
   // Center tile origin
   int centerTileX,  centerTileY;

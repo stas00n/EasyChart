@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 
+
+#define MAX_FONT_WIDTH  64
+
 typedef const struct 
 {
   uint16_t              chWidth;

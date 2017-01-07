@@ -269,17 +269,18 @@ void CLCD::PutChar(char c, int x, int y)
   if(c < _font->startCh || c > _font->endCh)
     return;
   c -= _font->startCh;
+  
   CRect r;
   r.left = x;
   r.top = y;
-  r.width = _font->desc[c].chWidth + _font->interval;;
+  r.width = _font->desc[c].chWidth + _font->interval;
   r.height = _font->height;
   SetDrawRect(&r);
+  
   uint16_t w = _font->desc[c].chWidth;
   uint8_t t;
-//  uint8_t n = 0;
   uint8_t* pchbitmap;
-  uint16_t pixels[100];
+  uint16_t pixels[MAX_FONT_WIDTH];
   WriteMemoryStart();
   
   pchbitmap = (uint8_t*)_font->bitmaps + _font->desc[c].chOffset;
@@ -292,56 +293,50 @@ void CLCD::PutChar(char c, int x, int y)
       t = *(pchbitmap + i * (1 + ((w - 1) >> 3)) + (j >> 3));
       t <<= (j & 7);
       if(t & 0x80) pixels[j] = _penCol;
-     // else pixels[j] = _bkCol;
-      
-      //        n++;
-      //        if(n > w)break;
     }
-    // }
+
     WritePixelsBitmap(pixels, r.width);
   }
 }
 
-//void CLCD::PutCharTransparent(char c, int x, int y)
-//{
-//  CRect r;
-//  r.left = x;
-//  r.top = y;
-//  r.width = 8;//_font->width;
-//  r.height = 1;//_font->height;
-//  //SetDrawRect(&r);
-//  uint16_t n = _font->width * _font->height;
-//  uint8_t t;
-//  uint16_t pixels[8];
-//  uint8_t n2 = 0;
-//  //ReadMemoryStart();
-//  //ReadPixels();
-//  WriteMemoryStart();
-//  for(uint32_t i = 0; i < (n >> 3); i++)
-//  {
-//    SetDrawRect(&r);
-//    ReadMemoryStart();
-//    ReadPixels(pixels, 8);
-//    t = *((uint8_t*)_font + 4 + i + (c - _font->offset) * _font->height * (_font->width >> 3));
-//    for(uint8_t j = 0; j < 8; j++)
-//    {
-//      if(t & 0x80) pixels[j] = _penCol;
-//     // else pixels[j] = _bkCol;
-//      t <<= 1;
-//      n2++;
-//    }
-//    SetDrawRect(&r);
-//    WriteMemoryStart();
-//    WritePixelsBitmap(pixels, 8);
-//    r.left+=8;
-//    if(n2 >= _font->width)
-//    {
-//      r.top++;
-//      r.left = x;
-//      n2 = 0;
-//    }
-//  }
-//}
+
+
+void CLCD::PutCharTransparent(char c, int x, int y)
+{
+  if(c < _font->startCh || c > _font->endCh)
+    return;
+  c -= _font->startCh;
+  
+  CRect r;
+  r.left = x;
+  r.top = y;
+  r.width = _font->desc[c].chWidth + _font->interval;
+  r.height = _font->height;
+  SetDrawRect(&r);
+  
+  uint16_t w = _font->desc[c].chWidth;
+  uint8_t t;
+  uint8_t* pchbitmap;
+  uint16_t pixels[MAX_FONT_WIDTH];
+
+  pchbitmap = (uint8_t*)_font->bitmaps + _font->desc[c].chOffset;
+  for(uint32_t i = 0; i < r.height; i++)
+  {
+    ReadMemoryStart();
+    ReadPixels(pixels, r.width);
+    for(uint8_t j = 0; j < w; j++)
+    {
+      t = *(pchbitmap + i * (1 + ((w - 1) >> 3)) + (j >> 3));
+      t <<= (j & 7);
+      if(t & 0x80) pixels[j] = _penCol;
+    }
+    WriteMemoryStart();
+    WritePixelsBitmap(pixels, r.width);
+    //r.top++;
+    //SetDrawRect(&r);
+    SetPageAddress(r.top + i + 1, r.top + r.height); 
+  }
+}
 
 void CLCD::Print(char* str, int x, int y, int* strkern)
 {
@@ -364,28 +359,28 @@ void CLCD::Print(char* str, int x, int y, int* strkern)
       continue;
     }
     
-//    if(c == ' ')
-//    {
-//      X += _font->spaceW;
-//      continue;
-//    }
+    //    if(c == ' ')
+    //    {
+    //      X += _font->spaceW;
+    //      continue;
+    //    }
     
     if(c < _font->startCh || c > _font->endCh)
       c = ' ';
     
-    PutChar(c, X, y);
-    //PutCharTransparent(c, X, y);
-    c -= _font->startCh;
-    X += _font->desc[c].chWidth + _font->interval;
-    if(strkern)
-      X += strkern[pos];
-    
     // Auto <CR><LF>
-    if(X + _font->desc[c].chWidth > DISP_WIDTH)
+    if(X + _font->desc[c - _font->startCh].chWidth > DISP_WIDTH)
     {
       X = x;
       y += _font->height;
     }
+    
+    //PutChar(c, X, y);
+    PutCharTransparent(c, X, y);
+    c -= _font->startCh;
+    X += _font->desc[c].chWidth + _font->interval;
+    if(strkern)
+      X += strkern[pos];
   }
 }
 
