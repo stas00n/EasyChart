@@ -43,8 +43,8 @@ uint8_t* buf;
   lcd._bkCol = 0xA800;
   lcd._penCol = 0xffff;
   // Print() test
-  while(1)
-  {
+//  while(1)
+//  {
     //  Gradient fill
     rect.left = 24;
     rect.width = 272;
@@ -73,7 +73,7 @@ uint8_t* buf;
     lcd._trPrint = true;
     lcd.Print("Тест прозрачного фона текста", 20,255); 
     
-  }
+//  }
   // Center tile origin
   int centerTileX,  centerTileY;
   

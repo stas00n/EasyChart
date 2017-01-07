@@ -81,7 +81,6 @@ public:
   
   int SetDrawRect(CRect* rect);
   void FillRect(CRect* rect, uint16_t pColor);
-  void MemRect(CRect* rect, uint16_t* mem);
   void DrawBitmap(CRect* rect, uint16_t* bm);
   void ReadBitmap(CRect* rect, uint16_t* bm);
   void ReadPixels(uint16_t* buf, uint32_t nPixels);

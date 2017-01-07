@@ -71,21 +71,6 @@ void CLCD::FillRect(CRect* rect, uint16_t color)
 
 }
 
-void CLCD::MemRect(CRect* rect, uint16_t* mem)
-{
-  uint16_t pix;
-  uint32_t nPixels = rect->width * rect->height;
-  SetColumnAddress(rect->left, rect->left + rect->width - 1);
-  SetPageAddress(rect->top, rect->top + rect->height - 1);
-  WriteMemoryStart();
-  
-    
-  for(uint32_t i = 0; i < nPixels; i++)
-  {
-    pix = *mem++;
-    WritePixels(pix, 1);
-  }
-}
 
 void CLCD::DrawBitmap(CRect* rect, uint16_t* bm)
 {
@@ -200,7 +185,7 @@ void CLCD::DrawSprite(CSprite* sprite, int x, int y)
   {
     r.left = sprite->_x;
     r.top = sprite->_y;
-    MemRect(&r, sprite->_bmbkg);
+    DrawBitmap(&r, sprite->_bmbkg);
   }
   else
   {
@@ -216,7 +201,7 @@ void CLCD::DrawSprite(CSprite* sprite, int x, int y)
     sprite->_y = r.top = y;
     ReadBitmap(&r, sprite->_bmbkg);
     sprite->Overlay();
-    MemRect(&r, sprite->_bmov);
+    DrawBitmap(&r, sprite->_bmov);
   }
 }
 
@@ -230,7 +215,7 @@ void CLCD::ClearSprite(CSprite* sprite)
   {
     r.left = sprite->_x;
     r.top = sprite->_y;
-    MemRect(&r, sprite->_bmbkg);
+    DrawBitmap(&r, sprite->_bmbkg);
   }
   sprite->_bkgCaptured = false;
 }
