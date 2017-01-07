@@ -39,35 +39,35 @@ uint8_t* buf;
 //  rect.height = 1;
   
   lcd.Clear();
-  
-  lcd._bkCol = 0xF800;
-  lcd._penCol = 0xFFFF;
+  lcd._font = (FONT_INFO*)&arialNarrow_10ptFontInfo;
+  lcd._bkCol = 0xFFFF;
+  lcd._penCol = 0;
   // Print() test
   while(1)
   {
-    rect.left = 24;
-    rect.width = 272;
-    rect.top = 0;
-    rect.height = 10;
-    uint16_t c = 416;
-    for(uint8_t i = 0; i < 48; i++)
-    {
-      lcd.FillRect(&rect, c);
-      c += 32;
-      rect.top+=10;
-    }
+   // Gradient fill
+//    rect.left = 24;
+//    rect.width = 272;
+//    rect.top = 0;
+//    rect.height = 10;
+//    uint16_t c = 416;
+//    for(uint8_t i = 0; i < 48; i++)
+//    {
+//      lcd.FillRect(&rect, c);
+//      c += 32;
+//      rect.top+=10;
+//    }
     
-    lcd._font = (font_t*)SmallFont;
-    lcd.Print("TRANSPARENT PRINTING", 60, 40);
-
-    lcd._font = (font_t*)BigFont;
-    lcd.Print("Transparent printing in this version is good way to waste CPU\
- time due to huge amount of short LCD read/write operations. This feature\
- is subject of optimization in future versions.", 0, 140);
-    lcd._font = (font_t*)SevenSegNumFont;
-    lcd._penCol = 0;
-    lcd.Print("1234", 60, 210);
-    lcd._penCol = 0xffff;
+    lcd.Clear(0xFFFF);
+    lcd.Print("Øנטפע Arial Narrow Bold, 10", 26, 40);
+    
+    
+    lcd.Print("\
+!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]\
+^_`abcdefghijklmnopqrstuvwxyz{|}~ÀÁÂÃÄÅ¨ÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞ‗\
+אבגדהו¸זחטיךכלםמןנסעףפץצקרשתûü‎‏ÿ",
+    0, 200);
+                  
   }
   // Center tile origin
   int centerTileX,  centerTileY;

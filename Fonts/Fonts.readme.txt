@@ -1,0 +1,7 @@
+Fonts for this project was created with pavius 'TheDotFactory' utility.
+There is a Windows executable v0.1.4 included in this directory.
+Also you may visit author's website:
+http://www.eran.io/the-dot-factory-an-lcd-font-and-image-generator/
+or his github repo:
+https://github.com/pavius/the-dot-factory
+Many thanks to pavius.

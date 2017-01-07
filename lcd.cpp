@@ -266,69 +266,82 @@ void CLCD::ClearSprite(CSprite* sprite)
 
 void CLCD::PutChar(char c, int x, int y)
 {
+  if(c < _font->startCh || c > _font->endCh)
+    return;
+  c -= _font->startCh;
   CRect r;
   r.left = x;
   r.top = y;
-  r.width = _font->width;
+  r.width = _font->desc[c].chWidth + _font->interval;;
   r.height = _font->height;
   SetDrawRect(&r);
-  uint16_t n = _font->width * _font->height;
+  uint16_t w = _font->desc[c].chWidth;
   uint8_t t;
-  uint16_t pixels[8];
+//  uint8_t n = 0;
+  uint8_t* pchbitmap;
+  uint16_t pixels[100];
   WriteMemoryStart();
-  for(uint32_t i = 0; i < (n >> 3); i++)
+  
+  pchbitmap = (uint8_t*)_font->bitmaps + _font->desc[c].chOffset;
+  for(uint32_t i = 0; i < r.height; i++)
   {
-    t = *((uint8_t*)_font + 4 + i + (c - _font->offset) * _font->height * (_font->width >> 3));
-    for(uint8_t j = 0; j < 8; j++)
+    memset16(pixels, _bkCol, r.width);
+    
+    for(uint8_t j = 0; j < w; j++)
     {
+      t = *(pchbitmap + i * (1 + ((w - 1) >> 3)) + (j >> 3));
+      t <<= (j & 7);
       if(t & 0x80) pixels[j] = _penCol;
-      else pixels[j] = _bkCol;
-      t <<= 1;
+     // else pixels[j] = _bkCol;
+      
+      //        n++;
+      //        if(n > w)break;
     }
-    WritePixelsBitmap(pixels, 8);
+    // }
+    WritePixelsBitmap(pixels, r.width);
   }
 }
 
-void CLCD::PutCharTransparent(char c, int x, int y)
-{
-  CRect r;
-  r.left = x;
-  r.top = y;
-  r.width = 8;//_font->width;
-  r.height = 1;//_font->height;
-  //SetDrawRect(&r);
-  uint16_t n = _font->width * _font->height;
-  uint8_t t;
-  uint16_t pixels[8];
-  uint8_t n2 = 0;
-  //ReadMemoryStart();
-  //ReadPixels();
-  WriteMemoryStart();
-  for(uint32_t i = 0; i < (n >> 3); i++)
-  {
-    SetDrawRect(&r);
-    ReadMemoryStart();
-    ReadPixels(pixels, 8);
-    t = *((uint8_t*)_font + 4 + i + (c - _font->offset) * _font->height * (_font->width >> 3));
-    for(uint8_t j = 0; j < 8; j++)
-    {
-      if(t & 0x80) pixels[j] = _penCol;
-     // else pixels[j] = _bkCol;
-      t <<= 1;
-      n2++;
-    }
-    SetDrawRect(&r);
-    WriteMemoryStart();
-    WritePixelsBitmap(pixels, 8);
-    r.left+=8;
-    if(n2 >= _font->width)
-    {
-      r.top++;
-      r.left = x;
-      n2 = 0;
-    }
-  }
-}
+//void CLCD::PutCharTransparent(char c, int x, int y)
+//{
+//  CRect r;
+//  r.left = x;
+//  r.top = y;
+//  r.width = 8;//_font->width;
+//  r.height = 1;//_font->height;
+//  //SetDrawRect(&r);
+//  uint16_t n = _font->width * _font->height;
+//  uint8_t t;
+//  uint16_t pixels[8];
+//  uint8_t n2 = 0;
+//  //ReadMemoryStart();
+//  //ReadPixels();
+//  WriteMemoryStart();
+//  for(uint32_t i = 0; i < (n >> 3); i++)
+//  {
+//    SetDrawRect(&r);
+//    ReadMemoryStart();
+//    ReadPixels(pixels, 8);
+//    t = *((uint8_t*)_font + 4 + i + (c - _font->offset) * _font->height * (_font->width >> 3));
+//    for(uint8_t j = 0; j < 8; j++)
+//    {
+//      if(t & 0x80) pixels[j] = _penCol;
+//     // else pixels[j] = _bkCol;
+//      t <<= 1;
+//      n2++;
+//    }
+//    SetDrawRect(&r);
+//    WriteMemoryStart();
+//    WritePixelsBitmap(pixels, 8);
+//    r.left+=8;
+//    if(n2 >= _font->width)
+//    {
+//      r.top++;
+//      r.left = x;
+//      n2 = 0;
+//    }
+//  }
+//}
 
 void CLCD::Print(char* str, int x, int y)
 {
@@ -349,12 +362,22 @@ void CLCD::Print(char* str, int x, int y)
       continue;
     }
     
-    //PutChar(c, X, y);
-    PutCharTransparent(c, X, y);
-    X += _font->width;
+//    if(c == ' ')
+//    {
+//      X += _font->spaceW;
+//      continue;
+//    }
+    
+    if(c < _font->startCh || c > _font->endCh)
+      c = ' ';
+    
+    PutChar(c, X, y);
+    //PutCharTransparent(c, X, y);
+    c -= _font->startCh;
+    X += _font->desc[c].chWidth + _font->interval;
     
     // Auto <CR><LF>
-    if(X + _font->width > DISP_WIDTH)
+    if(X + _font->desc[c].chWidth > DISP_WIDTH)
     {
       X = x;
       y += _font->height;
@@ -364,26 +387,11 @@ void CLCD::Print(char* str, int x, int y)
 
 void CLCD::ReadPixels(uint16_t* buf, uint32_t nPixels)
 {
-//  uint32_t nPixels = rect->width * rect->height;
-//  SetColumnAddress(rect->left, rect->left + rect->width - 1);
-//  SetPageAddress(rect->top, rect->top + rect->height - 1);
-//  ReadMemoryStart();
-//  ReadMemoryContinue();
   GPIOLCD->MODER &= 0xFFFF0000;
   // Dummy read
   GPIO_ResetPin(PIN_LCD_RD);
   GPIO_SetPin(PIN_LCD_RD);
-  
-//  GPIO_ResetPin(PIN_LCD_RD);
-//  GPIO_SetPin(PIN_LCD_RD);
-//  
-//  GPIO_ResetPin(PIN_LCD_RD);
-//  GPIO_SetPin(PIN_LCD_RD);
-//  
-//  GPIO_ResetPin(PIN_LCD_RD);
-//  GPIO_SetPin(PIN_LCD_RD);
-  
-  
+    
   uint8_t b;
   uint16_t w;
   for(uint32_t i = 0; i < nPixels; i++)

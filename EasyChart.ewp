@@ -1982,6 +1982,18 @@
     </file>
   </group>
   <group>
+    <name>Fonts</name>
+    <file>
+      <name>$PROJ_DIR$\Fonts\Arial_Narrow_10_b.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\Fonts\Arial_Narrow_10_b.h</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\Fonts\Fonts.h</name>
+    </file>
+  </group>
+  <group>
     <name>Pictures</name>
     <file>
       <name>$PROJ_DIR$\Sprites\up.c</name>

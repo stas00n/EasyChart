@@ -8,8 +8,8 @@
 #include "gpioex.h"
 #include "utils.h"
 #include "Timing.h"
-#include "Fonts/DefaultFonts.h"
-
+//#include "Fonts/DefaultFonts.h"
+#include "Fonts/Fonts.h"
 
 //  screen area desription
 #define DISP_WIDTH      272
@@ -86,14 +86,14 @@ public:
   void ReadBitmap(CRect* rect, uint16_t* bm);
   void ReadPixels(uint16_t* buf, uint32_t nPixels);
   void PutChar(char c, int x, int y);
-  void PutCharTransparent(char c, int x, int y);
+  //void PutCharTransparent(char c, int x, int y);
   void Print(char* str, int x, int y);
   
   void DrawSprite(CSprite* sprite, int x, int y);
   void ClearSprite(CSprite* sprite);
   
 public:
-  font_t* _font;
+  FONT_INFO* _font;
   uint16_t _bkCol;
   uint16_t _penCol;
 
