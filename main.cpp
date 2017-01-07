@@ -59,14 +59,10 @@ uint8_t* buf;
 //    }
     
     lcd.Clear(0xFFFF);
-    lcd.Print("Шрифт Arial Narrow Bold, 10", 26, 40);
-    
-    
-    lcd.Print("\
-!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]\
-^_`abcdefghijklmnopqrstuvwxyz{|}~АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ\
-абвгдеёжзийклмнопрстуфхцчшщъыьэюя",
-    0, 200);
+    lcd.Print("Шрифт Arial Narrow Bold, 10\r\nВозможность ручного кернинга.", 26, 40);
+    int kern[] = {-2,0,0,0,-1,-2,0,0,0,0,-1,0,-1,0,0,0,0,0,0,0,0};
+    lcd.Print("ГДЕ ЭТА СВОЛОЧЬ?", 55, 200);
+    lcd.Print("ГДЕ ЭТА СВОЛОЧЬ?", 55, 230, kern);
                   
   }
   // Center tile origin

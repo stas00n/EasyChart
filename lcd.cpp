@@ -343,11 +343,13 @@ void CLCD::PutChar(char c, int x, int y)
 //  }
 //}
 
-void CLCD::Print(char* str, int x, int y)
+void CLCD::Print(char* str, int x, int y, int* strkern)
 {
   int X = x;
+  int pos = -1;
   while (char c = *(str++))
   {
+    pos++;
     // Detect <CR>
     if(c == '\r') 
     {
@@ -375,6 +377,8 @@ void CLCD::Print(char* str, int x, int y)
     //PutCharTransparent(c, X, y);
     c -= _font->startCh;
     X += _font->desc[c].chWidth + _font->interval;
+    if(strkern)
+      X += strkern[pos];
     
     // Auto <CR><LF>
     if(X + _font->desc[c].chWidth > DISP_WIDTH)
