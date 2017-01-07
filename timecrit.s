@@ -196,6 +196,34 @@ WritePixel
   strh          r3, [r2, #0x18] 
   
 
-  bx      lr
+  bx            lr
 //-----------------------------------------------------------------------------
+  PUBLIC WriteComA/* (uint8_t com) */
+WriteComA
+  ldr           r1, =0x48000800 /* GPIOC_BASE */
+  ldr           r2, =0x48000400 /* GPIOB_BASE */
+  movs          r3, #2          /* GPIO_Pin_1 */
+  strh          r3, [r2, #0x28] /* Reset D/C */
+  strh          r0, [r1, #0x14] /* write odr */
+  //movs          r0, #1
+  lsls          r3, r3, #7      /* GPIO_Pin_8 */
+  strh          r3, [r1, #0x18] /* Set WR */
+  lsrs          r3, r3, #7      /* GPIO_Pin_1 */
+  strh          r3, [r2, #0x18] /* Set D/C */
+  bx            lr
+//-----------------------------------------------------------------------------
+  PUBLIC WriteDataA/* (uint8_t com) */
+WriteDataA
+  ldr           r1, =0x48000800 /* GPIOC_BASE */
+  //ldr           r2, =0x48000400 /* GPIOB_BASE */
+  movs          r3, #1          /* GPIO_Pin_8 */
+  lsls          r3, r3, #8      /* GPIO_Pin_8 */
+  //strh          r3, [r2, #0x28] /* Reset D/C */
+  strh          r0, [r1, #0x14] /* write odr */
+  //movs          r0, #1
+  
+  strh          r3, [r1, #0x18] /* Set WR */
+ // lsrs          r3, r3, #7      /* GPIO_Pin_1 */
+ // strh          r3, [r2, #0x18] /* Set D/C */
+  bx            lr
   end

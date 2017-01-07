@@ -38,9 +38,9 @@ uint8_t* buf;
 //  rect.top = 40;
 //  rect.height = 1;
   
-  lcd.Clear();
+//  lcd.Clear();
   lcd._font = (FONT_INFO*)&arialNarrow_10ptFontInfo;
-  lcd._bkCol = 0xFFFF;
+  lcd._bkCol = 0xA800;
   lcd._penCol = 0xffff;
   // Print() test
   while(1)
@@ -58,17 +58,21 @@ uint8_t* buf;
       rect.top+=10;
     }
     
-//    lcd.Clear(0xFFFF);
-    lcd.Print("Шрифт Arial Narrow Bold, 10\r\nВозможность ручного кернинга.", 26, 40);
-    int kern[] = {-2,0,0,0,-1,-2,0,0,0,0,-1,0,-1,0,0,0,0,0,0,0,0};
+//    lcd.Clear(0xA514);
+//    LoadFromFile("1.myf", 0,0);
+    lcd.Print("Шрифт Arial Narrow Bold, 10", 26, 40);
+//    int kern[] = {-2,0,0,0,-1,-2,0,0,0,0,-1,0,-1,0,0,0,0,0,0,0,0};
+//    
+//    lcd.Print("ГДЕ ЭТА СВОЛОЧЬ?", 55, 200);
+//    lcd.Print("ГДЕ ЭТА СВОЛОЧЬ?", 55, 230, kern);
+    lcd._penCol = 0xA514;
+    lcd._trPrint = false;
+    lcd.Print("Тест непрозрачного фона текста", 15,250);
     
-    lcd.Print("ГДЕ ЭТА СВОЛОЧЬ?", 55, 200);
-    lcd.Print("ГДЕ ЭТА СВОЛОЧЬ?", 55, 230, kern);
-    
-    lcd.Print("Тест прозрачного фона текста", 20,250);
-    lcd._penCol = 0x10;
-    lcd.Print("Тест прозрачного фона текста", 25,255); 
     lcd._penCol = 0xFFFF;
+    lcd._trPrint = true;
+    lcd.Print("Тест прозрачного фона текста", 20,255); 
+    
   }
   // Center tile origin
   int centerTileX,  centerTileY;

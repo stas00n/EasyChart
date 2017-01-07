@@ -65,7 +65,7 @@ class CLCD
 public:
   CLCD();
   ~CLCD();
-  
+
   void WriteCom(uint8_t com);
   void WriteData (uint8_t data);
   
@@ -87,16 +87,15 @@ public:
   void ReadPixels(uint16_t* buf, uint32_t nPixels);
   void PutChar(char c, int x, int y);
   void PutCharTransparent(char c, int x, int y);
-  //void Print(char* str, int x, int y);
   void Print(char* str, int x, int y, int* strkern = NULL);
   void DrawSprite(CSprite* sprite, int x, int y);
   void ClearSprite(CSprite* sprite);
   
 public:
   FONT_INFO* _font;
-  uint16_t _bkCol;
-  uint16_t _penCol;
-
+  uint16_t   _bkCol;
+  uint16_t   _penCol;
+  bool       _trPrint;
 };
 
 /*---------------------"C" Linkage funcs:------------------------------------*/
@@ -108,6 +107,9 @@ void WritePixel(uint16_t* pPixel);
 void WritePixels(uint16_t pixel, uint32_t nPixels/*, uint32_t GPIOx_BASE*/);
 void WritePixelsBitmap(uint16_t* bm, uint32_t nPixels/*, uint32_t GPIOx_BASE*/);
 void WritePixelsBitmap2(uint16_t* bm, uint32_t nPixels, uint32_t GPIOx_BASE);
+void WriteComA(uint8_t com);
+void WriteDataA(uint8_t com);
+
 
 #ifdef __cplusplus
 }

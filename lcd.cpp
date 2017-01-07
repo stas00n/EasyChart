@@ -12,17 +12,18 @@ void CLCD::Init()
   GPIO_SetPin(PIN_LCD_CS);
   __delay(50000);
   GPIO_SetPin(PIN_LCD_RST);
+  GPIO_ResetPin(PIN_LCD_CS);
   __delay(50000);
   
   WriteCom(1);      // SW Reset  
   WriteCom(0x11);   // Exit Sleep
   __delay(100000);
   
-  WriteCom(0x36);   //Set Address Mode
-  WriteData(0x48);  //(0x48);
-  WriteCom(0x3A);   //Set Pixel Format
+  WriteCom(0x36);   // Set Address Mode
+  WriteData(0x48);
+  WriteCom(0x3A);   // Set Pixel Format
   WriteData(0x05);
-  WriteCom(0x29);   //set display on
+  WriteCom(0x29);   // Set display on
 }
 
 void CLCD::SetColumnAddress(uint16_t startCol, uint16_t endCol)
@@ -66,7 +67,7 @@ void CLCD::FillRect(CRect* rect, uint16_t color)
   
   uint16_t pixel = color;
   
-  WritePixels(pixel, nPixels/*, GPIOC_BASE*/);
+  WritePixels(pixel, nPixels);
 
 }
 
@@ -82,7 +83,7 @@ void CLCD::MemRect(CRect* rect, uint16_t* mem)
   for(uint32_t i = 0; i < nPixels; i++)
   {
     pix = *mem++;
-    WritePixels(pix, 1/*, GPIOC_BASE*/);
+    WritePixels(pix, 1);
   }
 }
 
@@ -102,58 +103,28 @@ void CLCD::ReadBitmap(CRect* rect, uint16_t* bm)
   SetColumnAddress(rect->left, rect->left + rect->width - 1);
   SetPageAddress(rect->top, rect->top + rect->height - 1);
   ReadMemoryStart();
-
-  GPIOLCD->MODER &= 0xFFFF0000;
-  // Dummy read
-  GPIO_ResetPin(PIN_LCD_RD);
-  GPIO_SetPin(PIN_LCD_RD);
-  
-  uint8_t b;
-  uint16_t w;
-  for(uint32_t i = 0; i < nPixels; i++)
-  {
-    GPIO_ResetPin(PIN_LCD_RD);
-    GPIO_SetPin(PIN_LCD_RD);
-    b = (uint8_t)(GPIOLCD->IDR);
-    b >>= 3;
-    w = b << 11;
-    
-    GPIO_ResetPin(PIN_LCD_RD);
-    GPIO_SetPin(PIN_LCD_RD);
-    b = (uint8_t)(GPIOLCD->IDR);
-    b >>= 2;
-    w |= b << 5;
-    
-    
-    GPIO_ResetPin(PIN_LCD_RD);
-    GPIO_SetPin(PIN_LCD_RD);
-    b = (uint8_t)(GPIOLCD->IDR);
-    b >>= 3;
-    w |= b;
-    *bm = w;
-    
-    bm++;
-  }
-  GPIOLCD->MODER |= 0x5555;
+  ReadPixels(bm, nPixels);
 }
 
 void CLCD::WriteCom(uint8_t com)
 {
-  GPIO_ResetPin(PIN_LCD_CS);
-  GPIO_ResetPin(PIN_LCD_DCX);
-  GPIO_ResetPin(PIN_LCD_WR);
-  GPIOC->ODR = com;
-  GPIO_SetPin(PIN_LCD_WR);
-  GPIO_SetPin(PIN_LCD_DCX);
+  WriteComA(com);
+//  GPIO_ResetPin(PIN_LCD_CS);
+//  GPIO_ResetPin(PIN_LCD_DCX);
+//  GPIO_ResetPin(PIN_LCD_WR);
+//  GPIOC->ODR = com;
+//  GPIO_SetPin(PIN_LCD_WR);
+//  GPIO_SetPin(PIN_LCD_DCX);
 }
 
 void CLCD::WriteData (uint8_t data)
 {
-  GPIO_ResetPin(PIN_LCD_CS);
-  GPIO_SetPin(PIN_LCD_DCX);
-  GPIO_ResetPin(PIN_LCD_WR);
-  GPIOC->ODR = data;
-  GPIO_SetPin(PIN_LCD_WR);
+  WriteDataA(data);
+//  GPIO_ResetPin(PIN_LCD_CS);
+//  GPIO_SetPin(PIN_LCD_DCX);
+//  GPIO_ResetPin(PIN_LCD_WR);
+//  GPIOC->ODR = data;
+//  GPIO_SetPin(PIN_LCD_WR);
 }
 
 void CLCD::Clear(uint16_t color)
@@ -332,8 +303,7 @@ void CLCD::PutCharTransparent(char c, int x, int y)
     }
     WriteMemoryStart();
     WritePixelsBitmap(pixels, r.width);
-    //r.top++;
-    //SetDrawRect(&r);
+
     SetPageAddress(r.top + i + 1, r.top + r.height); 
   }
 }
@@ -345,28 +315,22 @@ void CLCD::Print(char* str, int x, int y, int* strkern)
   while (char c = *(str++))
   {
     pos++;
-    // Detect <CR>
-    if(c == '\r') 
+    
+    if(c == '\r')       // <CR> 
     {
       X = x;
       continue;
     }
-    
-    // Detect <LF>
-    if(c == '\n')
+
+    if(c == '\n')       // <LF>
     {
       y += _font->height;
       continue;
     }
     
-    //    if(c == ' ')
-    //    {
-    //      X += _font->spaceW;
-    //      continue;
-    //    }
-    
+    // Type something when char is undefined in font 
     if(c < _font->startCh || c > _font->endCh)
-      c = ' ';
+      c = _font->startCh;
     
     // Auto <CR><LF>
     if(X + _font->desc[c - _font->startCh].chWidth > DISP_WIDTH)
@@ -375,46 +339,73 @@ void CLCD::Print(char* str, int x, int y, int* strkern)
       y += _font->height;
     }
     
-    //PutChar(c, X, y);
-    PutCharTransparent(c, X, y);
+    if(!_trPrint)
+      PutChar(c, X, y);
+    else
+      PutCharTransparent(c, X, y);
+    
     c -= _font->startCh;
+    // Add approach
     X += _font->desc[c].chWidth + _font->interval;
-    if(strkern)
+    // Add kern if specified
+    if(strkern != NULL)
       X += strkern[pos];
   }
 }
 
 void CLCD::ReadPixels(uint16_t* buf, uint32_t nPixels)
 {
+  // Additional calls to GPIO_ResetPin needed because of
+  // very short ~WR pulse which exceeds LCD controller read
+  // cycle timings. This takes place when high level of speed 
+  // optimization is configured in IAR project settings.
+  // Try to comment extra delay if you have fast LCD controller.
+  // Try to add extra delay if ReadPixels() reads wrong.
+  
+  // Configure data lines as inputs
   GPIOLCD->MODER &= 0xFFFF0000;
-  // Dummy read
+  
+  // Dummy read after Memory Read command
   GPIO_ResetPin(PIN_LCD_RD);
+  GPIO_ResetPin(PIN_LCD_RD);
+//  GPIO_ResetPin(PIN_LCD_RD);
   GPIO_SetPin(PIN_LCD_RD);
-    
-  uint8_t b;
-  uint16_t w;
+  
+  uint8_t b;    // 8-bit color component retrieved from LCD memory
+  uint16_t w;   // 16-bit RGB result
+  
   for(uint32_t i = 0; i < nPixels; i++)
   {
     GPIO_ResetPin(PIN_LCD_RD);
+    GPIO_ResetPin(PIN_LCD_RD);
+//    GPIO_ResetPin(PIN_LCD_RD);
     GPIO_SetPin(PIN_LCD_RD);
-    b = (uint8_t)(GPIOLCD->IDR);
+    
+    b = (uint8_t)(GPIOLCD->IDR);        // Get R component
     b >>= 3;
     w = b << 11;
-    
+  
     GPIO_ResetPin(PIN_LCD_RD);
+    GPIO_ResetPin(PIN_LCD_RD);
+//    GPIO_ResetPin(PIN_LCD_RD);
     GPIO_SetPin(PIN_LCD_RD);
-    b = (uint8_t)(GPIOLCD->IDR);
+    
+    b = (uint8_t)(GPIOLCD->IDR);        // Get G component
     b >>= 2;
     w |= b << 5;
     
-    
     GPIO_ResetPin(PIN_LCD_RD);
+    GPIO_ResetPin(PIN_LCD_RD);
+//    GPIO_ResetPin(PIN_LCD_RD);
     GPIO_SetPin(PIN_LCD_RD);
-    b = (uint8_t)(GPIOLCD->IDR);
+    
+    b = (uint8_t)(GPIOLCD->IDR);        // Get B component
     b >>= 3;
     w |= b;
     
     *(buf++) = w;
   }
+  
+  // Return data lines to Outputs
   GPIOLCD->MODER |= 0x5555;
 }
