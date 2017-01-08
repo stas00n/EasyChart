@@ -2,13 +2,13 @@
 #include "ff.h"
 
 extern const unsigned short up[];
-const int bufsize = 2048;
+const int bufsize = 4096;
 
 CLCD lcd;
 CMYF myf;
 uint8_t* buf;
 
- void main()
+  void main()
 {
   Clock_Config();
   GPIO_Config();
@@ -57,11 +57,13 @@ uint8_t* buf;
       c += 32;
       rect.top+=10;
     }
-    
-//    lcd.Clear(0xA514);
-//    LoadFromFile("1.myf", 0,0);
-    lcd.Print("Øðèôò Arial Narrow Bold, 10", 26, 40);
-//    int kern[] = {-2,0,0,0,-1,-2,0,0,0,0,-1,0,-1,0,0,0,0,0,0,0,0};
+    while(1){
+    lcd.Clear(0xA514);
+    //LoadFromFile("1.myf", 0,0);
+    LoadFromFileRAW("1-24.raw",0,0);
+    //lcd.Print("Øðèôò Arial Narrow Bold, 10", 26, 40);
+    }
+    //    int kern[] = {-2,0,0,0,-1,-2,0,0,0,0,-1,0,-1,0,0,0,0,0,0,0,0};
 //    
 //    lcd.Print("ÃÄÅ ÝÒÀ ÑÂÎËÎ×Ü?", 55, 200);
 //    lcd.Print("ÃÄÅ ÝÒÀ ÑÂÎËÎ×Ü?", 55, 230, kern);
@@ -148,14 +150,15 @@ uint8_t* buf;
         LoadFromFile(filepath, centerTileX + 256 * tx, centerTileY + 256 * ty);
       }
     }
-    
+    lcd.Clear();
     // Sprite drawing test:
-    for(int i = 0; i < 100; i++)
-    {
-      lcd.DrawSprite(&sp, 100 + i, 210);
-      __delay(100000);
-    }
-    lcd.ClearSprite(&sp);
+//    for(int i = 0; i < 100; i++)
+//    {
+//      lcd.DrawSprite(&sp, 100 + i, 210);
+//      __delay(100000);
+//    }
+//    lcd.ClearSprite(&sp);
+ //   lcd.Clear();
   }
 }
 
@@ -179,6 +182,34 @@ void LoadFromFile(char* filename, int x, int y)
     }
     f_close(&f);
   }  
+}
+
+void LoadFromFileRAW(char* filename, int x, int y)
+{
+  //int n = 1; 
+  uint32_t br;
+  FIL f;
+  FRESULT fresult = f_open(&f, filename, FA_READ | FA_OPEN_EXISTING);
+  if(fresult != FR_OK)
+    return;
+  
+  f_read(&f, buf, bufsize, &br);
+  CRect r;
+  r.left = 0;
+  r.width = 272;
+  r.top = 0;
+  r.height = 480;
+  lcd.SetDrawRect(&r);
+  lcd.WriteMemoryStart();
+  WritePixelsBitmap2((uint16_t*)buf, (br>>1));
+  while(br)
+  {
+    f_read(&f, buf, bufsize, &br);
+//    if(br == 0)
+//      r.top = 7;//break;
+    WritePixelsBitmap2((uint16_t*)buf, (br>>1));
+  }
+  f_close(&f);
 }
 
 void zoomIn(uint8_t* zoom)

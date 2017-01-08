@@ -1,3 +1,5 @@
+#define GPIOB_BASE 0x48000400
+#define GPIOC_BASE 0x48000800
 
  section .text:CODE
   PUBLIC WritePixels
@@ -33,66 +35,99 @@ _exit1
 ;-------------------------------------------------------------------------------  
   
   PUBLIC WritePixelsBitmap
-WritePixelsBitmap       ;(uint16_t* bm, uint32_t nPixels, uint32_t GPIOx_BASE);
+WritePixelsBitmap /* (uint16_t* bm, uint32_t nPixels) */
+  cmp           r1, #0
+  beq           WritePixelsBitmap_exit
   
-  ldr           r2, =0x48000800/*GPIOC_BASE*/
-  push          {r4}
-  movs          r3, #1                  ;load BSRR value
+  push          {r4-r5}
+  ldr           r2, =GPIOC_BASE
+  
+  movs          r3, #1                  /* GPIO_Pin_8 */
   lsls          r3, r3, #8
   
-_lp2
-  ldrb          r4,[r0, #1]
-  strh          r4, [r2, #0x14]         ;write odr
-  strh          r3,[r2, #0x18]
-  ldrb          r4, [r0]
+WritePixelsBitmap_loop_1
+  ldrh          r4, [r0]
+  lsrs          r5, r4, #8
+  strh          r5, [r2, #0x14]         /* Write GPIO_ODR */
+  strh          r3, [r2, #0x18]         /* Send WR pulse */
+  
+  uxtb          r4, r4
   strh          r4, [r2, #0x14]
   strh          r3, [r2, #0x18]
+  
   adds          r0, r0, #2
   subs          r1, r1, #1
-  bne           _lp2
+  bne           WritePixelsBitmap_loop_1
   
-  pop           {r4}  
+  pop           {r4-r5}
+WritePixelsBitmap_exit  
   bx lr
   
 ;------------------------------------------------------------------------------- 
   PUBLIC WritePixelsBitmap2
-WritePixelsBitmap2       ;(uint16_t* bm, uint32_t nPixels, uint32_t GPIOx_BASE);
+WritePixelsBitmap2 /* (uint16_t* bm, uint32_t nPixels) */
+
+  cmp           r1, #0
+  beq           WritePixelsBitmap2_exit_1
   
   push          {r4-r6}
-  movs          r3, #1                  ;load BSRR value
-  movs          r6, #255                ;mask
+  ldr           r2, =GPIOC_BASE
+
+
+  lsls          r6, r1, #31             /* Store Half word remainder */
+  lsrs          r6, r6, #31
+  lsrs          r1, r1, #1              /* Full word count */
+  
+  movs          r3, #1                  /* GPIO_Pin_8 */
   lsls          r3, r3, #8
   
-  lsrs          r1, r1, #1              ;count uint32
+  cmp           r1, #0                  
+  beq           WritePixelsBitmap2_half /* No full words */
   
-_lp3
-  ldr           r5,[r0]
+WritePixelsBitmap2_loop_1
+  ldr           r5,[r0]                 /* Load Full word */
+  rev16         r5, r5                  /* Swap halfwords */
+
+  uxtb          r4, r5                  /* First pixel MSB */
+  strh          r4, [r2, #0x14]         /* Write GPIO_ODR */
+  strh          r3,[r2, #0x18]          /* Send WR pulse */
   
-  lsrs          r4, r5, #8
-  ands          r4, r6
-  strh          r4, [r2, #0x14]         ;write odr
-  strh          r3,[r2, #0x18]
-  
-  movs          r4, r5
-  ands          r4, r6
+  lsrs          r5, r5, #8              /* First pixel LSB */
+  uxtb          r4, r5
   strh          r4, [r2, #0x14]
   strh          r3, [r2, #0x18]
   
-  lsrs          r4, r5, #24
-  ands          r4, r6
+  lsrs          r5, r5, #8              /* Second pixel MSB */
+  uxtb          r4, r5
   strh          r4, [r2, #0x14]
   strh          r3, [r2, #0x18]
   
-  lsrs          r4, r5, #16
-  ands          r4, r6
-  strh          r4, [r2, #0x14]
+  lsrs          r5, r5, #8              /* Second pixel LSB */
+  strh          r5, [r2, #0x14]
   strh          r3, [r2, #0x18]
   
   adds          r0, r0, #4
   subs          r1, r1, #1
-  bne           _lp3
+  bne           WritePixelsBitmap2_loop_1
+
+WritePixelsBitmap2_half
+  cmp           r6, #0                  /* Is there remaining halfword? */
+  beq           WritePixelsBitmap2_exit_2
+
+  ldrh          r5,[r0]
   
-  pop           {r4-r6}  
+  lsrs          r4, r5, #8              /* MSB */
+  strh          r4, [r2, #0x14]
+  strh          r3,[r2, #0x18]
+  
+  uxtb          r5, r5                  /* LSB */
+  strh          r5, [r2, #0x14]
+  strh          r3,[r2, #0x18]
+  
+WritePixelsBitmap2_exit_2
+  pop           {r4-r6}
+  
+WritePixelsBitmap2_exit_1  
   bx lr
 
 ;-------------------------------------------------------------------------------
@@ -200,8 +235,8 @@ WritePixel
 //-----------------------------------------------------------------------------
   PUBLIC WriteComA/* (uint8_t com) */
 WriteComA
-  ldr           r1, =0x48000800 /* GPIOC_BASE */
-  ldr           r2, =0x48000400 /* GPIOB_BASE */
+  ldr           r1, =GPIOC_BASE /* GPIOC_BASE */
+  ldr           r2, =GPIOB_BASE /* GPIOB_BASE */
   movs          r3, #2          /* GPIO_Pin_1 */
   strh          r3, [r2, #0x28] /* Reset D/C */
   strh          r0, [r1, #0x14] /* write odr */
@@ -214,7 +249,7 @@ WriteComA
 //-----------------------------------------------------------------------------
   PUBLIC WriteDataA/* (uint8_t com) */
 WriteDataA
-  ldr           r1, =0x48000800 /* GPIOC_BASE */
+  ldr           r1, =GPIOC_BASE /* GPIOC_BASE */
   //ldr           r2, =0x48000400 /* GPIOB_BASE */
   movs          r3, #1          /* GPIO_Pin_8 */
   lsls          r3, r3, #8      /* GPIO_Pin_8 */

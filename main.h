@@ -20,6 +20,7 @@
 #define MIN_ZOOM        3
 
 void LoadFromFile(char* filename, int x, int y);
+void LoadFromFileRAW(char* filename, int x, int y);
 void zoomIn(uint8_t* zoom);
 void zoomOut(uint8_t* zoom);
 void scrlH(PIXELPOINT_T* pt, signed char dx); 

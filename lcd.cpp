@@ -1,5 +1,4 @@
 #include "lcd.h"
-
   
 CLCD::CLCD(){;}
 CLCD::~CLCD(){;}
@@ -79,7 +78,7 @@ void CLCD::DrawBitmap(CRect* rect, uint16_t* bm)
   SetPageAddress(rect->top, rect->top + rect->height - 1);
   WriteMemoryStart();
 
-  WritePixelsBitmap2(bm, nPixels, GPIOC_BASE);
+  WritePixelsBitmap2(bm, nPixels);
 }
 
 void CLCD::ReadBitmap(CRect* rect, uint16_t* bm)

@@ -103,9 +103,9 @@ extern "C" {
 #endif
 
 void WritePixel(uint16_t* pPixel);  
-void WritePixels(uint16_t pixel, uint32_t nPixels/*, uint32_t GPIOx_BASE*/);
-void WritePixelsBitmap(uint16_t* bm, uint32_t nPixels/*, uint32_t GPIOx_BASE*/);
-void WritePixelsBitmap2(uint16_t* bm, uint32_t nPixels, uint32_t GPIOx_BASE);
+void WritePixels(uint16_t pixel, uint32_t nPixels);
+void WritePixelsBitmap(uint16_t* bm, uint32_t nPixels);
+void WritePixelsBitmap2(uint16_t* bm, uint32_t nPixels);
 void WriteComA(uint8_t com);
 void WriteDataA(uint8_t com);
 
