@@ -1,5 +1,6 @@
 #include "main.h"
 #include "ff.h"
+#include "ffasync.h"
 
 extern const unsigned short up[];
 const int bufsize = 4096;
@@ -16,149 +17,54 @@ uint8_t* buf;
   
   Buttons_Init();
   lcd.Init();
-  
+  lcd.Clear();
+  lcd._bkCol = 0;
+  lcd._font = (FONT_INFO*)&arialNarrow_10ptFontInfo;
+  lcd._penCol = 0xffff;
+  struct{
+    int x;
+    int y;
+  }con;
+  con.x = 0; con.y = 0;
   FRESULT fresult;
   FATFS fs;
-  fresult = f_mount(&fs, "0", 1);
+  uint8_t retry = 10;
+  while(retry--)
+  {
+    fresult = f_mount(&fs, "0", 1);
+    if(fresult == FR_OK) break;
+  }
+  if(fresult != FR_OK)
+    lcd.Print("Error: Can't initialize SD Card!", con.x, con.y);
+  else
+    lcd.Print("SD card init OK.", con.x, con.y);
   
-
+  con.y += lcd._font->height;
   buf = (uint8_t*)malloc(bufsize);
-  
-  double lat = 54.679;
-  double lon = 20.349;
-  uint8_t zoom = 13;  
-  PIXELPOINT_T pt;
-  
-  char filepath[MAX_PATH];
+    
+//  char filepath[MAX_PATH];
 
-//  int dx = 0;
-  CRect rect;
+//  CRect rect;
 //  rect.left = 60;
 //  rect.width = 200;
 //  rect.top = 40;
 //  rect.height = 1;
   
 //  lcd.Clear();
-  lcd._font = (FONT_INFO*)&arialNarrow_10ptFontInfo;
-  lcd._bkCol = 0xA800;
-  lcd._penCol = 0xffff;
-  // Print() test
-//  while(1)
-//  {
-    //  Gradient fill
-    rect.left = 24;
-    rect.width = 272;
-    rect.top = 0;
-    rect.height = 10;
-    uint16_t c = 416;
-    for(uint8_t i = 0; i < 48; i++)
-    {
-      lcd.FillRect(&rect, c);
-      c += 32;
-      rect.top+=10;
-    }
-    while(1){
-    lcd.Clear(0xA514);
-    //LoadFromFile("1.myf", 0,0);
-    LoadFromFileRAW("1-24.raw",0,0);
-    //lcd.Print("Шрифт Arial Narrow Bold, 10", 26, 40);
-    }
-    //    int kern[] = {-2,0,0,0,-1,-2,0,0,0,0,-1,0,-1,0,0,0,0,0,0,0,0};
-//    
-//    lcd.Print("ГДЕ ЭТА СВОЛОЧЬ?", 55, 200);
-//    lcd.Print("ГДЕ ЭТА СВОЛОЧЬ?", 55, 230, kern);
-    lcd._penCol = 0xA514;
-    lcd._trPrint = false;
-    lcd.Print("Тест непрозрачного фона текста", 15,250);
-    
-    lcd._penCol = 0xFFFF;
-    lcd._trPrint = true;
-    lcd.Print("Тест прозрачного фона текста", 20,255); 
-    
-//  }
-  // Center tile origin
-  int centerTileX,  centerTileY;
-  
-  // Find center tile
-  LatLon2Pixel(lat, lon, zoom, &pt);
-  
-  // Create sprite
-  CSprite sp;
-  sp.Create(20, 20, (uint16_t*)up);
-  // Set sprite transparent color
-  sp._trColor = 0;
-  
+   FIL f;
   while(1)
   {
-
+   
+//fresult = f_open(&f, "1.myf", FA_READ | FA_OPEN_EXISTING);
+UINT br;
+fresult = f_read(&f,buf,512,&br);
+     lcd.Clear(0xA514);
+     memset(buf, 0xaa, 512);
+     adisk_read(0, buf, 16448, 1/*(bufsize >> 9)*/);
+    //LoadFromFile("1.myf", 0,0);
+    //LoadFromFileRAW("1-24.raw",0,0);
+     f_close(&f);
     
-    uint32_t b = GetButton();
-    switch(b)
-    {
-    case 1:
-      scrlV(&pt, (signed char)15);
-      break;
-      
-    case 2:
-      scrlV(&pt, (signed char)-15);
-      break;
-      
-    case 3:
-      Pixel2LatLon(&pt, &lat, &lon);
-      zoomIn(&zoom);
-      LatLon2Pixel(lat, lon, zoom, &pt);
-      break;
-      
-    case 4:
-      Pixel2LatLon(&pt, &lat, &lon);
-      zoomOut(&zoom);
-      LatLon2Pixel(lat, lon, zoom, &pt);
-      break;
-      
-    default:
-      break;
-    }
-    Clear_Buttons();
-    
-    
-    GenerateTilePath(pt.tile_x, pt.tile_y,zoom, "SONAR", filepath);
-    
-    centerTileX = 136 - pt.tile_pixl_x;
-    centerTileY = 240 - pt.tile_pixl_y;
-    
-    int toLeft;
-    if(centerTileX > 0) toLeft = -1;
-    else toLeft = 0;
-    
-    int toRight;
-    if(centerTileX + 256 < 272) toRight = 1;
-    else toRight = 0;
-    
-    int upper;
-    if(centerTileY > 0) upper = -1;
-    else upper = 0;
-
-    int lower;
-    if(centerTileY < 480) lower = 1;
-    else lower = 0;
-    
-    for(int tx = toLeft; tx <= toRight; tx++)
-    {
-      for (int ty = upper; ty <= lower; ty++)
-      {
-        GenerateTilePath(pt.tile_x + tx, pt.tile_y + ty,zoom, "SONAR", filepath);
-        LoadFromFile(filepath, centerTileX + 256 * tx, centerTileY + 256 * ty);
-      }
-    }
-    lcd.Clear();
-    // Sprite drawing test:
-//    for(int i = 0; i < 100; i++)
-//    {
-//      lcd.DrawSprite(&sp, 100 + i, 210);
-//      __delay(100000);
-//    }
-//    lcd.ClearSprite(&sp);
- //   lcd.Clear();
   }
 }
 

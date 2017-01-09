@@ -79,7 +79,7 @@
  #define RCC_APBPeriphClockCmd_SPI_SD  RCC_APB2PeriphClockCmd
  #define RCC_APBPeriph_SPI_SD     RCC_APB2Periph_SPI1
  /* - for SPI1 and full-speed APB2: 72MHz/4 */
- #define SPI_BaudRatePrescaler_SPI_SD  SPI_BaudRatePrescaler_4
+ #define SPI_BaudRatePrescaler_SPI_SD  SPI_BaudRatePrescaler_2
 
 #endif
 
@@ -357,7 +357,7 @@ void release_spi (void)
 /*-----------------------------------------------------------------------*/
 /* Transmit/Receive Block using DMA (Platform dependent. STM32 here)     */
 /*-----------------------------------------------------------------------*/
-static
+
 void stm32_dma_transfer(
 	BOOL receive,		/* FALSE for buff->SPI, TRUE for SPI->buff               */
 	const BYTE *buff,	/* receive TRUE  : 512 byte data block to be transmitted
@@ -633,7 +633,8 @@ BOOL xmit_datablock (
 /* Send a command packet to MMC                                          */
 /*-----------------------------------------------------------------------*/
 
-static
+//static
+extern "C"
 BYTE send_cmd (
 	BYTE cmd,		/* Command byte */
 	DWORD arg		/* Argument */
@@ -1007,5 +1008,66 @@ RAMFUNC void disk_timerproc (void)
 
 		Stat = s;
 	}
+}
+
+
+
+extern "C" void spi_dma_read(BYTE* buff, UINT btr)
+{
+  DMA_InitTypeDef DMA_InitStructure;
+  WORD rw_workbyte[] = { 0xffff };
+  
+  /* shared DMA configuration values */
+  DMA_InitStructure.DMA_PeripheralBaseAddr = (DWORD)(&(SPI_SD->DR));
+  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  DMA_InitStructure.DMA_BufferSize = btr;
+  DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
+  DMA_InitStructure.DMA_Priority = DMA_Priority_VeryHigh;
+  DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
+  
+  DMA_DeInit(DMA_Channel_SPI_SD_RX);
+  DMA_DeInit(DMA_Channel_SPI_SD_TX);
+  
+    
+    /* DMA1 channel2 configuration SPI1 RX ---------------------------------------------*/
+    /* DMA1 channel4 configuration SPI2 RX ---------------------------------------------*/
+    DMA_InitStructure.DMA_MemoryBaseAddr = (DWORD)buff;
+    DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;
+    DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+    DMA_Init(DMA_Channel_SPI_SD_RX, &DMA_InitStructure);
+    
+    /* DMA1 channel3 configuration SPI1 TX ---------------------------------------------*/
+    /* DMA1 channel5 configuration SPI2 TX ---------------------------------------------*/
+    DMA_InitStructure.DMA_MemoryBaseAddr = (DWORD)rw_workbyte;
+    DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;
+    DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Disable;
+    DMA_Init(DMA_Channel_SPI_SD_TX, &DMA_InitStructure);
+    
+
+  
+  /* Enable DMA RX Channel */
+  DMA_Cmd(DMA_Channel_SPI_SD_RX, ENABLE);
+  /* Enable DMA TX Channel */
+  DMA_Cmd(DMA_Channel_SPI_SD_TX, ENABLE);
+  
+  /* Enable SPI TX/RX request */
+  SPI_I2S_DMACmd(SPI_SD, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx, ENABLE);
+  
+  /* Wait until DMA1_Channel 3 Transfer Complete */
+  /// not needed: while (DMA_GetFlagStatus(DMA_FLAG_SPI_SD_TC_TX) == RESET) { ; }
+  /* Wait until DMA1_Channel 2 Receive Complete */
+  while (DMA_GetFlagStatus(DMA_FLAG_SPI_SD_TC_RX) == RESET) { ; }
+  // same w/o function-call:
+  // while ( ( ( DMA1->ISR ) & DMA_FLAG_SPI_SD_TC_RX ) == RESET ) { ; }
+  
+  /* Disable DMA RX Channel */
+  DMA_Cmd(DMA_Channel_SPI_SD_RX, DISABLE);
+  /* Disable DMA TX Channel */
+  DMA_Cmd(DMA_Channel_SPI_SD_TX, DISABLE);
+  
+  /* Disable SPI RX/TX request */
+  SPI_I2S_DMACmd(SPI_SD, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx, DISABLE);
 }
 

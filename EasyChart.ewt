@@ -2148,6 +2148,12 @@
       <name>$PROJ_DIR$\fatfs\ff.h</name>
     </file>
     <file>
+      <name>$PROJ_DIR$\fatfs\ffasync.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\fatfs\ffasync.h</name>
+    </file>
+    <file>
       <name>$PROJ_DIR$\fatfs\ffconf.h</name>
     </file>
     <file>
@@ -2164,6 +2170,9 @@
     </file>
     <file>
       <name>$PROJ_DIR$\Fonts\Arial_Narrow_10_b.h</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\Fonts\DefaultFonts.c</name>
     </file>
     <file>
       <name>$PROJ_DIR$\Fonts\Fonts.h</name>
@@ -2266,16 +2275,10 @@
     </file>
   </group>
   <file>
-    <name>$PROJ_DIR$\fatfs\buttons.c</name>
+    <name>$PROJ_DIR$\buttons.c</name>
   </file>
   <file>
-    <name>$PROJ_DIR$\fatfs\buttons.h</name>
-  </file>
-  <file>
-    <name>$PROJ_DIR$\Fonts\DefaultFonts.c</name>
-  </file>
-  <file>
-    <name>$PROJ_DIR$\fatfs\dmaread.c</name>
+    <name>$PROJ_DIR$\buttons.h</name>
   </file>
   <file>
     <name>$PROJ_DIR$\hardware.h</name>

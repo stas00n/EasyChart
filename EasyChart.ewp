@@ -248,7 +248,7 @@
         <option>
           <name>CCAllowList</name>
           <version>1</version>
-          <state>11111110</state>
+          <state>00000000</state>
         </option>
         <option>
           <name>CCDebugInfo</name>
@@ -340,7 +340,7 @@
         </option>
         <option>
           <name>CCOptLevel</name>
-          <state>3</state>
+          <state>0</state>
         </option>
         <option>
           <name>CCOptStrategy</name>
@@ -349,7 +349,7 @@
         </option>
         <option>
           <name>CCOptLevelSlave</name>
-          <state>3</state>
+          <state>0</state>
         </option>
         <option>
           <name>CompilerMisraRules98</name>
@@ -1972,6 +1972,12 @@
       <name>$PROJ_DIR$\fatfs\ff.h</name>
     </file>
     <file>
+      <name>$PROJ_DIR$\fatfs\ffasync.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\fatfs\ffasync.h</name>
+    </file>
+    <file>
       <name>$PROJ_DIR$\fatfs\ffconf.h</name>
     </file>
     <file>
@@ -1988,6 +1994,9 @@
     </file>
     <file>
       <name>$PROJ_DIR$\Fonts\Arial_Narrow_10_b.h</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\Fonts\DefaultFonts.c</name>
     </file>
     <file>
       <name>$PROJ_DIR$\Fonts\Fonts.h</name>
@@ -2090,16 +2099,10 @@
     </file>
   </group>
   <file>
-    <name>$PROJ_DIR$\fatfs\buttons.c</name>
+    <name>$PROJ_DIR$\buttons.c</name>
   </file>
   <file>
-    <name>$PROJ_DIR$\fatfs\buttons.h</name>
-  </file>
-  <file>
-    <name>$PROJ_DIR$\Fonts\DefaultFonts.c</name>
-  </file>
-  <file>
-    <name>$PROJ_DIR$\fatfs\dmaread.c</name>
+    <name>$PROJ_DIR$\buttons.h</name>
   </file>
   <file>
     <name>$PROJ_DIR$\hardware.h</name>
