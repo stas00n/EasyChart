@@ -357,7 +357,7 @@ void release_spi (void)
 /*-----------------------------------------------------------------------*/
 /* Transmit/Receive Block using DMA (Platform dependent. STM32 here)     */
 /*-----------------------------------------------------------------------*/
-
+extern "C"
 void stm32_dma_transfer(
 	BOOL receive,		/* FALSE for buff->SPI, TRUE for SPI->buff               */
 	const BYTE *buff,	/* receive TRUE  : 512 byte data block to be transmitted
@@ -1054,7 +1054,7 @@ extern "C" void spi_dma_read(BYTE* buff, UINT btr)
   
   /* Enable SPI TX/RX request */
   SPI_I2S_DMACmd(SPI_SD, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx, ENABLE);
-  
+return;
   /* Wait until DMA1_Channel 3 Transfer Complete */
   /// not needed: while (DMA_GetFlagStatus(DMA_FLAG_SPI_SD_TC_TX) == RESET) { ; }
   /* Wait until DMA1_Channel 2 Receive Complete */

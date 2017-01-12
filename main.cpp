@@ -3,12 +3,12 @@
 #include "ffasync.h"
 
 extern const unsigned short up[];
-const int bufsize = 4096;
+const int bufsize = 2048;
 
 CLCD lcd;
 CMYF myf;
-uint8_t* buf;
-
+uint8_t* buf0;
+uint8_t* buf1;
   void main()
 {
   Clock_Config();
@@ -40,8 +40,10 @@ uint8_t* buf;
     lcd.Print("SD card init OK.", con.x, con.y);
   
   con.y += lcd._font->height;
-  buf = (uint8_t*)malloc(bufsize);
-    
+  buf0 = (uint8_t*)malloc(bufsize);
+  buf1 = (uint8_t*)malloc(bufsize);
+memset(buf0, 0, 2048);  
+memset(buf1, 0, 2048); 
 //  char filepath[MAX_PATH];
 
 //  CRect rect;
@@ -54,69 +56,89 @@ uint8_t* buf;
    FIL f;
   while(1)
   {
-   
-//fresult = f_open(&f, "1.myf", FA_READ | FA_OPEN_EXISTING);
-UINT br;
-fresult = f_read(&f,buf,512,&br);
-     lcd.Clear(0xA514);
-     memset(buf, 0xaa, 512);
-     adisk_read(0, buf, 16448, 1/*(bufsize >> 9)*/);
-    //LoadFromFile("1.myf", 0,0);
-    //LoadFromFileRAW("1-24.raw",0,0);
-     f_close(&f);
+    
+    fresult = f_open(&f, "2.myf", FA_READ | FA_OPEN_EXISTING);
+    if(fresult != FR_OK) continue;
+    UINT br;
+    uint8_t* rbuf = buf1;
+    uint8_t* dbuf = buf0;
+    f_read(&f, buf0, bufsize, &br);
+    //f_aread_start(&f, buf0, bufsize, &br);
+    while((fresult = f_aread_getrdy()) != FR_OK);
+    //f_aread_start(&f, buf1, bufsize, &br);
+    
+    
+    uint8_t* pos = myf.Draw_MYF_Start(buf0, bufsize, 0, 0);
+
+    while(br)
+    {
+//      if(rbuf == buf0)
+//        rbuf = buf1;
+//      else rbuf = buf0;
+//      
+//      if(dbuf == buf0)
+//        dbuf = buf1;
+//      else dbuf = buf0;
+      f_read(&f, buf0, bufsize, &br);
+      //f_aread_start(&f, rbuf, bufsize, &br);
+      //while((fresult = f_aread_getrdy()) != FR_OK);
+      pos = myf.Draw_MYF_Continue(buf0, bufsize);
+    }
+    f_close(&f);
+    lcd.Clear();
     
   }
 }
 
-void LoadFromFile(char* filename, int x, int y)
-{
-  int n = 1; 
-  uint32_t br;
-  FIL f;
-  FRESULT fresult = f_open(&f, filename, FA_READ | FA_OPEN_EXISTING);
-  if(fresult != FR_OK)
-    fresult = f_open(&f, "NOIMG.MYF", FA_READ | FA_OPEN_EXISTING);
-  if(fresult == FR_OK)
-  {
-    f_read(&f, buf, bufsize, &br);
-    uint8_t* pos = myf.Draw_MYF_Start(buf, bufsize, x, y);
-    while(pos)
-    {
-      f_read(&f, buf, bufsize, &br);
-      pos = myf.Draw_MYF_Continue(buf, bufsize);
-      n++;
-    }
-    f_close(&f);
-  }  
-}
+//void LoadFromFile(char* filename, int x, int y)
+//{
+//  int n = 1; 
+//  uint32_t br;
+//  FIL f;
+//  FRESULT fresult = f_open(&f, filename, FA_READ | FA_OPEN_EXISTING);
+//  if(fresult != FR_OK)
+//    fresult = f_open(&f, "NOIMG.MYF", FA_READ | FA_OPEN_EXISTING);
+//  if(fresult == FR_OK)
+//  {
+//    f_read(&f, buf, bufsize, &br);
+//    uint8_t* pos = myf.Draw_MYF_Start(buf, bufsize, x, y);
+//    while(pos)
+//    {
+//      f_read(&f, buf, bufsize, &br);
+//      pos = myf.Draw_MYF_Continue(buf, bufsize);
+//      n++;
+//    }
+//    f_close(&f);
+//  }  
+//}
 
-void LoadFromFileRAW(char* filename, int x, int y)
-{
-  //int n = 1; 
-  uint32_t br;
-  FIL f;
-  FRESULT fresult = f_open(&f, filename, FA_READ | FA_OPEN_EXISTING);
-  if(fresult != FR_OK)
-    return;
-  
-  f_read(&f, buf, bufsize, &br);
-  CRect r;
-  r.left = 0;
-  r.width = 272;
-  r.top = 0;
-  r.height = 480;
-  lcd.SetDrawRect(&r);
-  lcd.WriteMemoryStart();
-  WritePixelsBitmap2((uint16_t*)buf, (br>>1));
-  while(br)
-  {
-    f_read(&f, buf, bufsize, &br);
-//    if(br == 0)
-//      r.top = 7;//break;
-    WritePixelsBitmap2((uint16_t*)buf, (br>>1));
-  }
-  f_close(&f);
-}
+//void LoadFromFileRAW(char* filename, int x, int y)
+//{
+//  //int n = 1; 
+//  uint32_t br;
+//  FIL f;
+//  FRESULT fresult = f_open(&f, filename, FA_READ | FA_OPEN_EXISTING);
+//  if(fresult != FR_OK)
+//    return;
+//  
+//  f_read(&f, buf, bufsize, &br);
+//  CRect r;
+//  r.left = 0;
+//  r.width = 272;
+//  r.top = 0;
+//  r.height = 480;
+//  lcd.SetDrawRect(&r);
+//  lcd.WriteMemoryStart();
+//  WritePixelsBitmap2((uint16_t*)buf, (br>>1));
+//  while(br)
+//  {
+//    f_read(&f, buf, bufsize, &br);
+////    if(br == 0)
+////      r.top = 7;//break;
+//    WritePixelsBitmap2((uint16_t*)buf, (br>>1));
+//  }
+//  f_close(&f);
+//}
 
 void zoomIn(uint8_t* zoom)
 {

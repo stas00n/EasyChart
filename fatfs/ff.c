@@ -964,7 +964,7 @@ FRESULT sync_fs (	/* FR_OK:succeeded, !=0:error */
 /* Get sector# from cluster#                                             */
 /*-----------------------------------------------------------------------*/
 
-static
+/*static*/
 DWORD clust2sect (	/* !=0:Sector number, 0:Failed (invalid cluster#) */
 	FATFS* fs,		/* File system object */
 	DWORD clst		/* Cluster# to be converted */
@@ -982,7 +982,7 @@ DWORD clust2sect (	/* !=0:Sector number, 0:Failed (invalid cluster#) */
 /* FAT access - Read value of a FAT entry                                */
 /*-----------------------------------------------------------------------*/
 
-static
+//static
 DWORD get_fat (	/* 0xFFFFFFFF:Disk error, 1:Internal error, 2..0x7FFFFFFF:Cluster status */
 	_FDID* obj,	/* Corresponding object */
 	DWORD clst	/* Cluster number to get the value */
@@ -3159,7 +3159,8 @@ FRESULT find_volume (	/* FR_OK(0): successful, !=0: any error occurred */
 /* Check if the file/directory object is valid or not                    */
 /*-----------------------------------------------------------------------*/
 
-static
+//static
+extern "C"
 FRESULT validate (	/* Returns FR_OK or FR_INVALID_OBJECT */
 	_FDID* obj,		/* Pointer to the _OBJ, the 1st member in the FIL/DIR object, to check validity */
 	FATFS** fs		/* Pointer to pointer to the owner file system object to return */
