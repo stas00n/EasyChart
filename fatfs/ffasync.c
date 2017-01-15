@@ -1,9 +1,11 @@
 #include "ffasync.h"
 #include "timing.h"
+
 ASYNCIO_T* as;
 extern DSTATUS Stat;
 extern BYTE CardType;
 extern volatile uint32_t Timer1;
+
 
 DRESULT adisk_read (
 	BYTE drv,       // Physical drive number (0)
@@ -210,10 +212,8 @@ extern "C" void DMA1_Channel2_3_IRQHandler()
                 DMA1_FLAG_TC2 |
                 DMA1_FLAG_HT2 |
                 DMA1_FLAG_TE2);
-  DMA_ClearFlag(DMA1_FLAG_GL3 |
-                DMA1_FLAG_TC3 |
-                DMA1_FLAG_HT3 |
-                DMA1_FLAG_TE3);
+  
+  
   DMA_Cmd(DMA_Channel_SPI_SD_RX, DISABLE);
   DMA_Cmd(DMA_Channel_SPI_SD_TX, DISABLE);
   SPI_I2S_DMACmd(SPI_SD, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx, DISABLE);
@@ -222,8 +222,8 @@ extern "C" void DMA1_Channel2_3_IRQHandler()
   rcvr_spi();
   rcvr_spi();
 
-  as->blocksRead += 1;
-  if(as->blocksRead < as->blocksToRead)
+  uint32_t blocksRead = ++as->blocksRead;
+  if(blocksRead < as->blocksToRead)
     Dma_Cont_Rd();
   else
     Dma_Stop_Rd();
@@ -239,67 +239,25 @@ void Dma_Cont_Rd()
   }
 
   as->buf += 512;
-//  DMA_Channel_SPI_SD_RX->CMAR += 512;
-//  DMA_Channel_SPI_SD_RX->CNDTR = 512;
-//  DMA_Channel_SPI_SD_TX->CNDTR = 512;
-//  
-//  DMA_Cmd(DMA_Channel_SPI_SD_RX, ENABLE);
-//  DMA_Cmd(DMA_Channel_SPI_SD_TX, ENABLE);
-//  SPI_I2S_DMACmd(SPI_SD, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx, ENABLE);
+  DMA_Channel_SPI_SD_RX->CMAR += 512;
+  DMA_Channel_SPI_SD_RX->CNDTR = 512;
+  DMA_Channel_SPI_SD_TX->CNDTR = 512;
 
-
-
-  DMA_InitTypeDef DMA_InitStructure;
-  WORD rw_workbyte[] = { 0xffff };
-  
-  /* shared DMA configuration values */
-  DMA_InitStructure.DMA_PeripheralBaseAddr = (DWORD)(&(SPI_SD->DR));
-  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
-  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
-  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-  DMA_InitStructure.DMA_BufferSize = 512;
-  DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
-  DMA_InitStructure.DMA_Priority = DMA_Priority_VeryHigh;
-  DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
-  
-  DMA_DeInit(DMA_Channel_SPI_SD_RX);
-  DMA_DeInit(DMA_Channel_SPI_SD_TX);
-  
-  
-  /* DMA1 channel2 configuration SPI1 RX ---------------------------------------------*/
-  /* DMA1 channel4 configuration SPI2 RX ---------------------------------------------*/
-  DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)as->buf;
-  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;
-  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
-  DMA_Init(DMA_Channel_SPI_SD_RX, &DMA_InitStructure);
-  
-  /* DMA1 channel3 configuration SPI1 TX ---------------------------------------------*/
-  /* DMA1 channel5 configuration SPI2 TX ---------------------------------------------*/
-  DMA_InitStructure.DMA_MemoryBaseAddr = (DWORD)rw_workbyte;
-  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;
-  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Disable;
-  DMA_Init(DMA_Channel_SPI_SD_TX, &DMA_InitStructure);
-  
-  DMA_ITConfig(DMA_Channel_SPI_SD_TX, DMA_IT_TC, ENABLE);
-  
-  NVIC_InitTypeDef nvic;
-  nvic.NVIC_IRQChannel = DMA1_Channel2_3_IRQn;
-  nvic.NVIC_IRQChannelPriority = 3;
-  nvic.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_Init(&nvic);
-  
+  // Enable DMA RX Channel
   DMA_Cmd(DMA_Channel_SPI_SD_RX, ENABLE);
-  /* Enable DMA TX Channel */
+  // Enable DMA TX Channel
   DMA_Cmd(DMA_Channel_SPI_SD_TX, ENABLE);
-  
-  /* Enable SPI TX/RX request */
+  // Enable SPI TX/RX request
   SPI_I2S_DMACmd(SPI_SD, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx, ENABLE);
-
-
-
 }
+
+//------------------------------------------------------------------------------
 void Dma_Stop_Rd()
 {
+  DMA_DeInit(DMA_Channel_SPI_SD_RX);
+  DMA_DeInit(DMA_Channel_SPI_SD_TX);
+  SPI_I2S_DMACmd(SPI_SD, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx, DISABLE);
+
   send_cmd(CMD12, 0);
   as->readComplete = 1;
 }

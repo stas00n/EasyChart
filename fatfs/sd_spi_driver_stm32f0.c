@@ -139,7 +139,7 @@ BYTE CardType;			// Card type flags
 
 enum speed_setting { INTERFACE_SLOW, INTERFACE_FAST };
 
-
+const uint16_t dmaTxDummy = 0xFFFF;
 
 static void interface_speed( enum speed_setting speed )
 {
@@ -1024,62 +1024,47 @@ RAMFUNC void disk_timerproc (void)
 
 extern "C" void spi_dma_read(BYTE* buff, UINT btr)
 {
-  DMA_InitTypeDef DMA_InitStructure;
-  WORD rw_workbyte[] = { 0xffff };
-  
-  /* shared DMA configuration values */
-  DMA_InitStructure.DMA_PeripheralBaseAddr = (DWORD)(&(SPI_SD->DR));
-  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
-  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
-  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-  DMA_InitStructure.DMA_BufferSize = 512;
-  DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
-  DMA_InitStructure.DMA_Priority = DMA_Priority_VeryHigh;
-  DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
-  
   DMA_DeInit(DMA_Channel_SPI_SD_RX);
   DMA_DeInit(DMA_Channel_SPI_SD_TX);
   
+  DMA_InitTypeDef dma;
+  
+  dma.DMA_PeripheralBaseAddr = (DWORD)(&(SPI_SD->DR));
+  dma.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
+  dma.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
+  dma.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  dma.DMA_BufferSize = 512;
+  dma.DMA_Mode = DMA_Mode_Normal;
+  dma.DMA_Priority = DMA_Priority_VeryHigh;
+  dma.DMA_M2M = DMA_M2M_Disable;
+  
+  dma.DMA_MemoryBaseAddr = (DWORD)buff;
+  dma.DMA_DIR = DMA_DIR_PeripheralSRC;
+  dma.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  
+  DMA_Init(DMA_Channel_SPI_SD_RX, &dma);
+  
+  dma.DMA_MemoryBaseAddr = (uint32_t)&dmaTxDummy;
+  dma.DMA_DIR = DMA_DIR_PeripheralDST;
+  dma.DMA_MemoryInc = DMA_MemoryInc_Disable;
+  
+  DMA_Init(DMA_Channel_SPI_SD_TX, &dma);
   
   
-  /* DMA1 channel2 configuration SPI1 RX ---------------------------------------------*/
-  /* DMA1 channel4 configuration SPI2 RX ---------------------------------------------*/
-  DMA_InitStructure.DMA_MemoryBaseAddr = (DWORD)buff;
-  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;
-  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
-  DMA_Init(DMA_Channel_SPI_SD_RX, &DMA_InitStructure);
-  
-  /* DMA1 channel3 configuration SPI1 TX ---------------------------------------------*/
-  /* DMA1 channel5 configuration SPI2 TX ---------------------------------------------*/
-  DMA_InitStructure.DMA_MemoryBaseAddr = (DWORD)rw_workbyte;
-  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;
-  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Disable;
-  DMA_Init(DMA_Channel_SPI_SD_TX, &DMA_InitStructure);
-  
-  
-  
+  // Enable RX TC interrupt
   DMA_ITConfig(DMA_Channel_SPI_SD_RX, DMA_IT_TC, ENABLE);
-  
-  NVIC_InitTypeDef nvic;
-  nvic.NVIC_IRQChannel = DMA1_Channel2_3_IRQn;
-  nvic.NVIC_IRQChannelPriority = 1;
-  nvic.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_Init(&nvic);
-  
-  
-  
-  /* Enable DMA RX Channel */
+  // Enable DMA RX Channel
   DMA_Cmd(DMA_Channel_SPI_SD_RX, ENABLE);
-  /* Enable DMA TX Channel */
+  // Enable DMA TX Channel
   DMA_Cmd(DMA_Channel_SPI_SD_TX, ENABLE);
-  /* Enable SPI TX/RX request */
+  // Enable SPI TX/RX request
   SPI_I2S_DMACmd(SPI_SD, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx, ENABLE);
 }
 
 //-----------------------------------------------------------------------------
 void SD_SPI_Driver_Init()
 {
-  // TIM Init
+  // TIM 100Hz
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM16, ENABLE);
 
   TIM_TimeBaseInitTypeDef tb;
@@ -1091,23 +1076,30 @@ void SD_SPI_Driver_Init()
   
   TIM_TimeBaseInit(TIM16, &tb);
   
+  // TIM interrupts
   TIM_ITConfig(TIM16, TIM_IT_Update, ENABLE);
   NVIC_InitTypeDef nvic;
+  
   nvic.NVIC_IRQChannel = TIM16_IRQn;
+  // Tim int priority should be greater than dma int priority
   nvic.NVIC_IRQChannelPriority = 0;
   nvic.NVIC_IRQChannelCmd = ENABLE;
   NVIC_Init(&nvic);
   
   TIM_Cmd(TIM16, ENABLE);
+  
+  // DMA Clock
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
+  
+  // DMA interrupts
+  nvic.NVIC_IRQChannel = DMA1_Channel2_3_IRQn;
+  nvic.NVIC_IRQChannelPriority = 1;
+  nvic.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&nvic);
 }
 
 extern "C" void TIM16_IRQHandler()
 {
-//  if(GPIOC->ODR & (1<<9))
-//    GPIOC->BRR = 1<<9;
-//  else
-//    GPIOC->BSRR = 1<<9;
-  
   // Decrement soft timers
   if(Timer1 > 0) Timer1--;
   if(Timer2 > 0) Timer2--;
