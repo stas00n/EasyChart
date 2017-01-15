@@ -10,6 +10,7 @@
 #define PIN_SPI_CS      GPIOA, 4
 
 #define PIN_BTN         GPIOA, 0
+#define PIN_LED         GPIOC, 9
 
 
 #define GPIOLCD         GPIOC

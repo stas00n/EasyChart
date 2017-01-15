@@ -188,6 +188,7 @@
           <state>USE_STDPERIPH_DRIVER</state>
           <state>STM32F030</state>
           <state>STM32_SD_USE_DMA</state>
+          <state>DEBUG</state>
         </option>
         <option>
           <name>CCPreprocFile</name>

@@ -21,6 +21,8 @@ void GPIO_Config()
   
   GPIO_Init_Single(&gpio, PIN_SPI_CS, 1);
   
+  GPIO_Init_Single(&gpio, PIN_LED, 0);
+  
   gpio.GPIO_Mode = GPIO_Mode_IN;
   gpio.GPIO_PuPd = GPIO_PuPd_UP;
   GPIO_Init_Single(&gpio, PIN_BTN);

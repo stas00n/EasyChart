@@ -127,30 +127,36 @@
 static const DWORD socket_state_mask_cp = (1 << 0);
 static const DWORD socket_state_mask_wp = (1 << 1);
 
-static volatile
-DSTATUS Stat = STA_NOINIT;	/* Disk status */
 
-static volatile
-DWORD Timer1, Timer2;	/* 100Hz decrement timers */
+DSTATUS Stat = STA_NOINIT;	// Disk status
 
-static
-BYTE CardType;			/* Card type flags */
+
+volatile DWORD Timer1;
+volatile DWORD Timer2;          // 100Hz decrement timers
+
+
+BYTE CardType;			// Card type flags
 
 enum speed_setting { INTERFACE_SLOW, INTERFACE_FAST };
 
+
+
 static void interface_speed( enum speed_setting speed )
 {
-	DWORD tmp;
-
-	tmp = SPI_SD->CR1;
-	if ( speed == INTERFACE_SLOW ) {
-		/* Set slow clock (100k-400k) */
-		tmp = ( tmp | SPI_BaudRatePrescaler_256 );
-	} else {
-		/* Set fast clock (depends on the CSD) */
-		tmp = ( tmp & ~SPI_BaudRatePrescaler_256 ) | SPI_BaudRatePrescaler_SPI_SD;
-	}
-	SPI_SD->CR1 = tmp;
+  DWORD tmp;
+  
+  tmp = SPI_SD->CR1;
+  if ( speed == INTERFACE_SLOW )
+  {
+    // Set slow clock (100k-400k)
+    tmp = ( tmp | SPI_BaudRatePrescaler_256 );
+  }
+  else
+  {
+    // Set fast clock (depends on the CSD)
+    tmp = ( tmp & ~SPI_BaudRatePrescaler_256 ) | SPI_BaudRatePrescaler_SPI_SD;
+  }
+  SPI_SD->CR1 = tmp;
 }
 
 #if SOCKET_WP_CONNECTED
@@ -158,18 +164,18 @@ static void interface_speed( enum speed_setting speed )
 
 static void socket_wp_init(void)
 {
-	GPIO_InitTypeDef GPIO_InitStructure;
-
-	/* Configure I/O for write-protect */
-	RCC_APB2PeriphClockCmd(RCC_APBxPeriph_GPIO_WP, ENABLE);
-	GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_WP;
-	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_WP;
-	GPIO_Init(GPIO_WP, &GPIO_InitStructure);
+  GPIO_InitTypeDef GPIO_InitStructure;
+  
+  /* Configure I/O for write-protect */
+  RCC_APB2PeriphClockCmd(RCC_APBxPeriph_GPIO_WP, ENABLE);
+  GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_WP;
+  GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_WP;
+  GPIO_Init(GPIO_WP, &GPIO_InitStructure);
 }
 
 static DWORD socket_is_write_protected(void)
 {
-	return ( GPIO_ReadInputData(GPIO_WP) & GPIO_Pin_WP ) ? socket_state_mask_wp : 0;
+  return ( GPIO_ReadInputData(GPIO_WP) & GPIO_Pin_WP ) ? socket_state_mask_wp : 0;
 }
 
 #else
@@ -225,34 +231,39 @@ static inline DWORD socket_is_empty(void)
 
 static void card_power(BOOL on)		/* switch FET for card-socket VCC */
 {
-	GPIO_InitTypeDef GPIO_InitStructure;
-
-	/* Turn on GPIO for power-control pin connected to FET's gate */
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIO_PWR, ENABLE);
-	/* Configure I/O for Power FET */
-	GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_PWR;
-	GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_PWR;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_Init(GPIO_PWR, &GPIO_InitStructure);
-	if (on) {
-		GPIO_ResetBits(GPIO_PWR, GPIO_Pin_PWR);
-	} else {
-		/* Chip select internal pull-down (to avoid parasite powering) */
-		GPIO_InitStructure.GPIO_Pin = GPIO_Pin_CS;
-		GPIO_Init(GPIO_CS, &GPIO_InitStructure);
-
-		GPIO_SetBits(GPIO_PWR, GPIO_Pin_PWR);
-	}
+  GPIO_InitTypeDef GPIO_InitStructure;
+  
+  /* Turn on GPIO for power-control pin connected to FET's gate */
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIO_PWR, ENABLE);
+  /* Configure I/O for Power FET */
+  GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_PWR;
+  GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_PWR;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+  GPIO_Init(GPIO_PWR, &GPIO_InitStructure);
+  if (on)
+  {
+    GPIO_ResetBits(GPIO_PWR, GPIO_Pin_PWR);
+  } else
+  {
+    /* Chip select internal pull-down (to avoid parasite powering) */
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_CS;
+    GPIO_Init(GPIO_CS, &GPIO_InitStructure);
+    
+    GPIO_SetBits(GPIO_PWR, GPIO_Pin_PWR);
+  }
 }
 
 #if (STM32_SD_DISK_IOCTRL == 1)
 static int chk_power(void)		/* Socket power state: 0=off, 1=on */
 {
-	if ( GPIO_ReadOutputDataBit(GPIO_PWR, GPIO_Pin_PWR) == Bit_SET ) {
-		return 0;
-	} else {
-		return 1;
-	}
+  if ( GPIO_ReadOutputDataBit(GPIO_PWR, GPIO_Pin_PWR) == Bit_SET )
+  {
+    return 0;
+  }
+  else
+  {
+    return 1;
+  }
 }
 #endif
 
@@ -464,8 +475,7 @@ void power_on (void)
 	socket_cp_init();
 	socket_wp_init();
 
-        __delay(250000);
-	//for (Timer1 = 25; Timer1; );	/* Wait for 250ms */
+	for (Timer1 = 25; Timer1; );	// Wait for 250ms
 
 	/* Configure I/O for Flash Chip select */
 	GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_CS;
@@ -563,7 +573,7 @@ BOOL rcvr_datablock (
 	if(token != 0xFE) return FALSE;	/* If not valid data token, return with error */
 
 #ifdef STM32_SD_USE_DMA
-	stm32_dma_transfer( TRUE, buff, btr );
+	stm32_dma_transfer( TRUE, buff, btr);
 #else
 	do {							/* Receive the data block into buffer */
           *(buff++) = rcvr_spi();
@@ -577,8 +587,8 @@ BOOL rcvr_datablock (
 	} while (btr -= 4);
 #endif /* STM32_SD_USE_DMA */
 
-	rcvr_spi();						/* Discard CRC */
-	rcvr_spi();
+	volatile uint8_t dt = rcvr_spi();						/* Discard CRC */
+	dt = rcvr_spi();
 
 	return TRUE;					/* Return with success */
 }
@@ -1022,7 +1032,7 @@ extern "C" void spi_dma_read(BYTE* buff, UINT btr)
   DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
   DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
   DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-  DMA_InitStructure.DMA_BufferSize = btr;
+  DMA_InitStructure.DMA_BufferSize = 512;
   DMA_InitStructure.DMA_Mode = DMA_Mode_Normal;
   DMA_InitStructure.DMA_Priority = DMA_Priority_VeryHigh;
   DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
@@ -1030,44 +1040,78 @@ extern "C" void spi_dma_read(BYTE* buff, UINT btr)
   DMA_DeInit(DMA_Channel_SPI_SD_RX);
   DMA_DeInit(DMA_Channel_SPI_SD_TX);
   
-    
-    /* DMA1 channel2 configuration SPI1 RX ---------------------------------------------*/
-    /* DMA1 channel4 configuration SPI2 RX ---------------------------------------------*/
-    DMA_InitStructure.DMA_MemoryBaseAddr = (DWORD)buff;
-    DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;
-    DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
-    DMA_Init(DMA_Channel_SPI_SD_RX, &DMA_InitStructure);
-    
-    /* DMA1 channel3 configuration SPI1 TX ---------------------------------------------*/
-    /* DMA1 channel5 configuration SPI2 TX ---------------------------------------------*/
-    DMA_InitStructure.DMA_MemoryBaseAddr = (DWORD)rw_workbyte;
-    DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;
-    DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Disable;
-    DMA_Init(DMA_Channel_SPI_SD_TX, &DMA_InitStructure);
-    
-
+  
+  
+  /* DMA1 channel2 configuration SPI1 RX ---------------------------------------------*/
+  /* DMA1 channel4 configuration SPI2 RX ---------------------------------------------*/
+  DMA_InitStructure.DMA_MemoryBaseAddr = (DWORD)buff;
+  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;
+  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  DMA_Init(DMA_Channel_SPI_SD_RX, &DMA_InitStructure);
+  
+  /* DMA1 channel3 configuration SPI1 TX ---------------------------------------------*/
+  /* DMA1 channel5 configuration SPI2 TX ---------------------------------------------*/
+  DMA_InitStructure.DMA_MemoryBaseAddr = (DWORD)rw_workbyte;
+  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralDST;
+  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Disable;
+  DMA_Init(DMA_Channel_SPI_SD_TX, &DMA_InitStructure);
+  
+  
+  
+  DMA_ITConfig(DMA_Channel_SPI_SD_RX, DMA_IT_TC, ENABLE);
+  
+  NVIC_InitTypeDef nvic;
+  nvic.NVIC_IRQChannel = DMA1_Channel2_3_IRQn;
+  nvic.NVIC_IRQChannelPriority = 1;
+  nvic.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&nvic);
+  
+  
   
   /* Enable DMA RX Channel */
   DMA_Cmd(DMA_Channel_SPI_SD_RX, ENABLE);
   /* Enable DMA TX Channel */
   DMA_Cmd(DMA_Channel_SPI_SD_TX, ENABLE);
-  
   /* Enable SPI TX/RX request */
   SPI_I2S_DMACmd(SPI_SD, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx, ENABLE);
-return;
-  /* Wait until DMA1_Channel 3 Transfer Complete */
-  /// not needed: while (DMA_GetFlagStatus(DMA_FLAG_SPI_SD_TC_TX) == RESET) { ; }
-  /* Wait until DMA1_Channel 2 Receive Complete */
-  while (DMA_GetFlagStatus(DMA_FLAG_SPI_SD_TC_RX) == RESET) { ; }
-  // same w/o function-call:
-  // while ( ( ( DMA1->ISR ) & DMA_FLAG_SPI_SD_TC_RX ) == RESET ) { ; }
+}
+
+//-----------------------------------------------------------------------------
+void SD_SPI_Driver_Init()
+{
+  // TIM Init
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM16, ENABLE);
+
+  TIM_TimeBaseInitTypeDef tb;
+  tb.TIM_ClockDivision = TIM_CKD_DIV4;
+  tb.TIM_CounterMode = TIM_CounterMode_Up;
+  tb.TIM_Prescaler = 12 - 1;    // (TIM_CLK = 48MHz) / 12 -> CK_PSC = 4 MHz 
+  tb.TIM_Period = 40000 - 1;    // 4 MHz / 40000 -> 100 Hz TIM_Update
+  tb.TIM_RepetitionCounter = 0;
   
-  /* Disable DMA RX Channel */
-  DMA_Cmd(DMA_Channel_SPI_SD_RX, DISABLE);
-  /* Disable DMA TX Channel */
-  DMA_Cmd(DMA_Channel_SPI_SD_TX, DISABLE);
+  TIM_TimeBaseInit(TIM16, &tb);
   
-  /* Disable SPI RX/TX request */
-  SPI_I2S_DMACmd(SPI_SD, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx, DISABLE);
+  TIM_ITConfig(TIM16, TIM_IT_Update, ENABLE);
+  NVIC_InitTypeDef nvic;
+  nvic.NVIC_IRQChannel = TIM16_IRQn;
+  nvic.NVIC_IRQChannelPriority = 0;
+  nvic.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&nvic);
+  
+  TIM_Cmd(TIM16, ENABLE);
+}
+
+extern "C" void TIM16_IRQHandler()
+{
+//  if(GPIOC->ODR & (1<<9))
+//    GPIOC->BRR = 1<<9;
+//  else
+//    GPIOC->BSRR = 1<<9;
+  
+  // Decrement soft timers
+  if(Timer1 > 0) Timer1--;
+  if(Timer2 > 0) Timer2--;
+  
+  TIM16->SR = ~TIM_FLAG_Update;
 }
 

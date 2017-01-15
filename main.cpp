@@ -1,19 +1,15 @@
 #include "main.h"
-#include "ff.h"
-#include "ffasync.h"
-
-extern const unsigned short up[];
-const int bufsize = 2048;
 
 CLCD lcd;
 CMYF myf;
-uint8_t* buf0;
-uint8_t* buf1;
-  void main()
+
+ASYNCIO_T asyncio;
+
+void main()
 {
   Clock_Config();
   GPIO_Config();
-  
+  SD_SPI_Driver_Init();
   
   Buttons_Init();
   lcd.Init();
@@ -21,7 +17,8 @@ uint8_t* buf1;
   lcd._bkCol = 0;
   lcd._font = (FONT_INFO*)&arialNarrow_10ptFontInfo;
   lcd._penCol = 0xffff;
-  struct{
+  struct
+  {
     int x;
     int y;
   }con;
@@ -40,10 +37,20 @@ uint8_t* buf1;
     lcd.Print("SD card init OK.", con.x, con.y);
   
   con.y += lcd._font->height;
-  buf0 = (uint8_t*)malloc(bufsize);
-  buf1 = (uint8_t*)malloc(bufsize);
-memset(buf0, 0, 2048);  
-memset(buf1, 0, 2048); 
+
+  // Allocate double buffer for async operation
+  uint8_t* dblbuf[2];
+  const int bufsize = 2048;
+  dblbuf[0] = (uint8_t*)malloc(bufsize);
+  dblbuf[1] = (uint8_t*)malloc(bufsize);
+#ifdef DEBUG
+  if(dblbuf[0] == NULL || dblbuf[1] == NULL)
+  {
+    lcd.Print("Error: Not enough memory for buffer.", con.x, con.y);
+    while(1){;}
+  }
+#endif // DEBUG
+  
 //  char filepath[MAX_PATH];
 
 //  CRect rect;
@@ -53,36 +60,31 @@ memset(buf1, 0, 2048);
 //  rect.height = 1;
   
 //  lcd.Clear();
-   FIL f;
+  FIL f;
   while(1)
   {
     
     fresult = f_open(&f, "2.myf", FA_READ | FA_OPEN_EXISTING);
     if(fresult != FR_OK) continue;
     UINT br;
-    uint8_t* rbuf = buf1;
-    uint8_t* dbuf = buf0;
-    f_read(&f, buf0, bufsize, &br);
-    //f_aread_start(&f, buf0, bufsize, &br);
-    while((fresult = f_aread_getrdy()) != FR_OK);
-    //f_aread_start(&f, buf1, bufsize, &br);
+
+    uint8_t sw;                // Buffers switch
+    sw = 0;
     
+    f_aread(&f, dblbuf[sw], bufsize, &br, &asyncio);
+    while(!asyncio.readComplete);
+    f_aread(&f, dblbuf[sw ^ 1], bufsize, &br, &asyncio);
     
-    uint8_t* pos = myf.Draw_MYF_Start(buf0, bufsize, 0, 0);
+    uint8_t* pos = myf.Draw_MYF_Start(dblbuf[sw], bufsize, 0, 0);
 
     while(br)
     {
-//      if(rbuf == buf0)
-//        rbuf = buf1;
-//      else rbuf = buf0;
-//      
-//      if(dbuf == buf0)
-//        dbuf = buf1;
-//      else dbuf = buf0;
-      f_read(&f, buf0, bufsize, &br);
-      //f_aread_start(&f, rbuf, bufsize, &br);
-      //while((fresult = f_aread_getrdy()) != FR_OK);
-      pos = myf.Draw_MYF_Continue(buf0, bufsize);
+      sw++;                     // Toggle buffers
+      sw &= 1;
+      
+      while(!asyncio.readComplete);
+      f_aread(&f, dblbuf[sw ^ 1], bufsize, &br, &asyncio);
+      pos = myf.Draw_MYF_Continue(dblbuf[sw], bufsize);
     }
     f_close(&f);
     lcd.Clear();

@@ -21,6 +21,7 @@ typedef enum {
 
 /*---------------------------------------*/
 /* Prototypes for disk control functions */
+void SD_SPI_Driver_Init();
 
 BOOL assign_drives (int argc, char *argv[]);
 DSTATUS disk_initialize (BYTE);
