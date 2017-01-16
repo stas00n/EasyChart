@@ -13,8 +13,11 @@ typedef struct
   volatile bool readComplete;
   volatile uint32_t blocksToRead;
   volatile uint32_t blocksRead;
-  volatile uint32_t err;
+  volatile uint32_t bytesToread;
+  volatile uint32_t* bytesRead;
   volatile uint8_t* buf;
+  volatile FRESULT result;
+  FIL* fp;
 }ASYNCIO_T;
 
 void Dma_Cont_Rd();
@@ -111,7 +114,8 @@ DWORD get_fat (	/* 0xFFFFFFFF:Disk error, 1:Internal error, 2..0x7FFFFFFF:Cluste
 extern "C" 
 {
   BYTE send_cmd (BYTE cmd, DWORD arg);
-  void spi_dma_read(BYTE* buff, UINT btr);
+  void spi_dma_read(BYTE* buff, UINT btr = 512);
+  void release_spi (void);
 }
 extern "C"
 void stm32_dma_transfer(

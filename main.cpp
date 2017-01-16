@@ -40,7 +40,7 @@ void main()
 
   // Allocate double buffer for async operation
   uint8_t* dblbuf[2];
-  const int bufsize = 2048;
+  const int bufsize = 20;
   dblbuf[0] = (uint8_t*)malloc(bufsize);
   dblbuf[1] = (uint8_t*)malloc(bufsize);
 #ifdef DEBUG

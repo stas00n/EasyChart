@@ -14,6 +14,8 @@ DRESULT adisk_read (
 	BYTE count      // Sector count (1..255) 
 )
 {
+  as->blocksToRead = count;     // Initialize sector cnt
+  
   if (drv || !count)
     return RES_PARERR;
   
@@ -22,35 +24,32 @@ DRESULT adisk_read (
   
   if (!(CardType & CT_BLOCK))
     sector *= 512;              // Convert to byte address if needed
-
+  
   as->blocksRead = 0;
-                    
-if (count == 1)                 // Single block read
-{
-  if (send_cmd(CMD17, sector) != 0)
-    return RES_ERROR;
   
-  if(!Wait_DataMarker())
-    return RES_ERROR;
-  
-  spi_dma_read(buff, 512);
-  return RES_OK;
-}
-else                            // Multiple block read
-{
-  if (send_cmd(CMD18, sector) != 0)
-    return RES_ERROR;
-  
-  if(!Wait_DataMarker())
-    return RES_ERROR;
-  
-  spi_dma_read(buff, (count << 9));
-  return RES_OK;
-  //    send_cmd(CMD12, 0);				/* STOP_TRANSMISSION */
-}
-	//release_spi();
-
-	//return /*count ? RES_ERROR :*/ RES_OK;
+  if (count == 1)               // Single block read
+  {
+    if (send_cmd(CMD17, sector) != 0)
+      return RES_ERROR;
+    
+    if(!Wait_DataMarker())
+      return RES_ERROR;
+    
+    spi_dma_read(buff);
+    return RES_OK;
+  }
+  else                          // Multiple block read
+  {
+    if (send_cmd(CMD18, sector) != 0)
+      return RES_ERROR;
+    
+    if(!Wait_DataMarker())
+      return RES_ERROR;
+    
+    spi_dma_read(buff);
+    return RES_OK;
+    
+  }
 }
 
 //-----------------------------------------------------------------------------
@@ -89,8 +88,10 @@ FRESULT f_aread(FIL* fp, void* buff, UINT btr, UINT* br, ASYNCIO_T* asyncio)
   
   as = asyncio;
   as->readComplete = 0;
-  as->err = 0;
+  as->result = FR_BUSY;
   as->buf = (uint8_t*)buff;
+  as->bytesRead = br;
+  as->fp = fp;
   
   *br = 0;	// Clear read byte counter
   res = validate(&fp->obj, &fs);				// Check validity of the file object
@@ -102,9 +103,7 @@ FRESULT f_aread(FIL* fp, void* buff, UINT btr, UINT* br, ASYNCIO_T* asyncio)
   if (btr > remain)
     btr = (UINT)remain;		// Truncate btr by remaining bytes
 
-//  for ( ;  btr;								/* Repeat until all data read */
-//		rbuff += rcnt, fp->fptr += rcnt, *br += rcnt, btr -= rcnt)
-//        {
+
   if (fp->fptr % SS(fs) == 0)
   {			/* On the sector boundary? */
     csect = (UINT)(fp->fptr / SS(fs) & (fs->csize - 1));	/* Sector offset in the cluster */
@@ -141,36 +140,24 @@ FRESULT f_aread(FIL* fp, void* buff, UINT btr, UINT* br, ASYNCIO_T* asyncio)
       {	/* Clip at cluster boundary */
         cc = fs->csize - csect;
       }
-      as->blocksToRead = cc;
-      if (adisk_read(fs->drv, rbuff, sect, cc) != RES_OK) ABORT(fs, FR_DISK_ERR);
-//      #if !_FS_READONLY && _FS_MINIMIZE <= 2			/* Replace one of the read sectors with cached data if it contains a dirty sector */
-//      #if _FS_TINY
-//      if (fs->wflag && fs->winsect - sect < cc)
-//      {
-//        mem_cpy(rbuff + ((fs->winsect - sect) * SS(fs)), fs->win, SS(fs));
-//      }
-//#else
-//      if ((fp->flag & FA_DIRTY) && fp->sect - sect < cc)
-//      {
-//        mem_cpy(rbuff + ((fp->sect - sect) * SS(fs)), fp->buf, SS(fs));
-//      }
-//      #endif
-//      #endif
-      	rcnt = SS(fs) * cc;				// Number of bytes transferred */
-      //	continue;
       
+      if (adisk_read(fs->drv, rbuff, sect, cc) != RES_OK)
+        ABORT(fs, FR_DISK_ERR);
+
+      	rcnt = SS(fs) * cc;				// Number of bytes transferred */
+        fp->fptr += rcnt;
     }
-    //#if !_FS_TINY
-    //			if (fp->sect != sect) {			/* Load data sector if not in cache */
-    //#if !_FS_READONLY
-    //				if (fp->flag & FA_DIRTY) {		/* Write-back dirty sector cache */
-    //					if (disk_write(fs->drv, fp->buf, fp->sect, 1) != RES_OK) ABORT(fs, FR_DISK_ERR);
-    //					fp->flag &= (BYTE)~FA_DIRTY;
-    //				}
-    //#endif
-    //				if (disk_read(fs->drv, fp->buf, sect, 1) != RES_OK)	ABORT(fs, FR_DISK_ERR);	/* Fill sector cache */
-    //			}
-    //#endif
+    else
+    {
+      if (fp->sect != sect)     // Load data sector if not in cache
+      {			
+        if (disk_read(fs->drv, fp->buf, sect, 1) != RES_OK)
+          ABORT(fs, FR_DISK_ERR);
+      }
+      fp->fptr += btr;
+      rcnt = SS(fs) - (UINT)fp->fptr % SS(fs);	/* Number of bytes left in the sector */
+//      mem_cpy(rbuff, fp->buf + fp->fptr % SS(fs), rcnt);	/* Extract partial sector */
+    }
     fp->sect = sect;
   }
 //  rcnt = SS(fs) - (UINT)fp->fptr % SS(fs);	/* Number of bytes left in the sector */
@@ -183,15 +170,16 @@ FRESULT f_aread(FIL* fp, void* buff, UINT btr, UINT* br, ASYNCIO_T* asyncio)
 //#endif
 //  }
 //  rbuff += rcnt;
-  fp->fptr += rcnt;
-  *br += rcnt;
-  btr -= rcnt;
+//  fp->fptr += rcnt;
+//  *br += rcnt;
+//  btr -= rcnt;
                 
          
   LEAVE_FF(fs, FR_OK);
   return FR_OK;
 }
 
+//------------------------------------------------------------------------------
 /* Copy memory to memory */
 static
 void mem_cpy (void* dst, const void* src, UINT cnt)
@@ -233,8 +221,8 @@ void Dma_Cont_Rd()
 {
   if(!Wait_DataMarker())
   {
-    as->err = 1;
-    as->readComplete = 1;
+    Dma_Stop_Rd();
+    as->result = FR_DISK_ERR;
     return;
   }
 
@@ -258,7 +246,8 @@ void Dma_Stop_Rd()
   DMA_DeInit(DMA_Channel_SPI_SD_TX);
   SPI_I2S_DMACmd(SPI_SD, SPI_I2S_DMAReq_Rx | SPI_I2S_DMAReq_Tx, DISABLE);
 
-  send_cmd(CMD12, 0);
+  send_cmd(CMD12, 0);           // STOP_TRANSMISSION
+  release_spi();
   as->readComplete = 1;
 }
 

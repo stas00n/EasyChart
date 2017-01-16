@@ -357,7 +357,8 @@ BYTE wait_ready (void)
 /* Deselect the card and release SPI bus                                 */
 /*-----------------------------------------------------------------------*/
 
-static
+//static
+extern "C"
 void release_spi (void)
 {
 	DESELECT();
@@ -1033,7 +1034,7 @@ extern "C" void spi_dma_read(BYTE* buff, UINT btr)
   dma.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Byte;
   dma.DMA_MemoryDataSize = DMA_MemoryDataSize_Byte;
   dma.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-  dma.DMA_BufferSize = 512;
+  dma.DMA_BufferSize = btr;
   dma.DMA_Mode = DMA_Mode_Normal;
   dma.DMA_Priority = DMA_Priority_VeryHigh;
   dma.DMA_M2M = DMA_M2M_Disable;
@@ -1098,6 +1099,7 @@ void SD_SPI_Driver_Init()
   NVIC_Init(&nvic);
 }
 
+//------------------------------------------------------------------------------
 extern "C" void TIM16_IRQHandler()
 {
   // Decrement soft timers
