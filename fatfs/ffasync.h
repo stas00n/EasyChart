@@ -5,22 +5,27 @@
 #include "ffasync.h"
 #include "integer.h"
 #include <stdint.h>
+#include <string.h>
 #include "diskio.h"
 #include "stm32f0xx_conf.h"
 
+// TODO: unvolatile if not need
 typedef struct
 {
   volatile bool readComplete;
   volatile uint32_t blocksToRead;
   volatile uint32_t blocksRead;
   volatile uint32_t bytesToread;
-  volatile uint32_t* bytesRead;
+  volatile uint32_t bytesRead;
   volatile uint8_t* buf;
   volatile FRESULT result;
+  uint32_t      remFullSects;
+  uint16_t      remBytes;
   FIL* fp;
+  volatile uint32_t bytesCached;
 }ASYNCIO_T;
 
-void Dma_Cont_Rd();
+void Dma_Cont_Rd(uint8_t* cache = NULL);
 void Dma_Stop_Rd();
 
 // Definitions for MMC/SDC command
@@ -97,7 +102,7 @@ void Dma_Stop_Rd();
 #endif
 
 
-FRESULT f_aread(FIL* fp, void* buff, UINT btr, UINT* br, ASYNCIO_T* asyncio);
+FRESULT f_aread(FIL* fp, void* buff, UINT btr,/* UINT* br,*/ ASYNCIO_T* asyncio);
 
 DRESULT adisk_read(BYTE drv, BYTE* buff, DWORD sector, BYTE count);
 bool Wait_DataMarker();
@@ -109,6 +114,11 @@ DWORD clust2sect (	/* !=0:Sector number, 0:Failed (invalid cluster#) */
 DWORD get_fat (	/* 0xFFFFFFFF:Disk error, 1:Internal error, 2..0x7FFFFFFF:Cluster status */
 	_FDID* obj,	/* Corresponding object */
 	DWORD clst	/* Cluster number to get the value */
+);
+
+DWORD clmt_clust (	/* <2:Error, >=2:Cluster number */
+	FIL* fp,		/* Pointer to the file object */
+	FSIZE_t ofs		/* File offset to be converted to cluster# */
 );
 
 extern "C" 

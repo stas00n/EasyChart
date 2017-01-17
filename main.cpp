@@ -32,23 +32,35 @@ void main()
     if(fresult == FR_OK) break;
   }
   if(fresult != FR_OK)
-    lcd.Print("Error: Can't initialize SD Card!", con.x, con.y);
+    lcd.Print("Error: Can't init SD Card!", con.x, con.y);
   else
     lcd.Print("SD card init OK.", con.x, con.y);
   
-  con.y += lcd._font->height;
+    con.y += lcd._font->height;
 
   // Allocate double buffer for async operation
   uint8_t* dblbuf[2];
-  const int bufsize = 20;
+  const int bufsize = 1100;
   dblbuf[0] = (uint8_t*)malloc(bufsize);
   dblbuf[1] = (uint8_t*)malloc(bufsize);
 #ifdef DEBUG
   if(dblbuf[0] == NULL || dblbuf[1] == NULL)
   {
     lcd.Print("Error: Not enough memory for buffer.", con.x, con.y);
+    con.y += lcd._font->height;
     while(1){;}
   }
+  // Unaligned memcpy() test. Working in IAR, other compilers not tested
+  uint8_t* d_e = (uint8_t*)0x20001f9c;  // even dest
+  uint8_t* d_o = (uint8_t*)0x20001f9b;  // odd dest
+  uint8_t* se = (uint8_t*)0x08001f9c;   // even src
+  uint8_t* so = (uint8_t*)0x08001f9b;   // odd src
+  memcpy(d_e, so, 80);
+  memcpy(d_o, so, 80);
+  memcpy(d_e, se, 80);
+  memcpy(d_o, se, 80);
+  lcd.Print("memcpy good.", con.x, con.y);// Test ok, if no HardFault here :)
+  con.y += lcd._font->height;
 #endif // DEBUG
   
 //  char filepath[MAX_PATH];
@@ -66,14 +78,14 @@ void main()
     
     fresult = f_open(&f, "2.myf", FA_READ | FA_OPEN_EXISTING);
     if(fresult != FR_OK) continue;
-    UINT br;
+    UINT br = 1;//заглушка пока что
 
     uint8_t sw;                // Buffers switch
     sw = 0;
     
-    f_aread(&f, dblbuf[sw], bufsize, &br, &asyncio);
+    f_aread(&f, dblbuf[sw], bufsize, /*&br,*/ &asyncio);
     while(!asyncio.readComplete);
-    f_aread(&f, dblbuf[sw ^ 1], bufsize, &br, &asyncio);
+    f_aread(&f, dblbuf[sw ^ 1], bufsize,/* &br,*/ &asyncio);
     
     uint8_t* pos = myf.Draw_MYF_Start(dblbuf[sw], bufsize, 0, 0);
 
@@ -83,7 +95,7 @@ void main()
       sw &= 1;
       
       while(!asyncio.readComplete);
-      f_aread(&f, dblbuf[sw ^ 1], bufsize, &br, &asyncio);
+      f_aread(&f, dblbuf[sw ^ 1], bufsize,/* &br,*/ &asyncio);
       pos = myf.Draw_MYF_Continue(dblbuf[sw], bufsize);
     }
     f_close(&f);
