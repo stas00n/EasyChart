@@ -77,106 +77,118 @@ inline uint8_t rcvr_spi()
 }
 
 //-----------------------------------------------------------------------------
-FRESULT f_aread(FIL* fp, void* buff, UINT btr, UINT* br, ASYNCIO_T* asyncio)
+FRESULT f_aread(FIL* fp, void* buff, UINT btr, /*UINT* br,*/ ASYNCIO_T* asyncio)
 {
   FRESULT res;
   FATFS *fs;
   DWORD clst, sect;
-  FSIZE_t remain;
-  UINT rcnt, cc, csect;
-  BYTE *rbuff = (BYTE*)buff;
+ // FSIZE_t remain;
+  UINT /*rcnt,*/ cc, csect;
+ // BYTE *rbuff = (BYTE*)buff;
   
+  // Initialize async struct
   as = asyncio;
   as->readComplete = 0;
+  as->bytesToread = btr;
   as->result = FR_BUSY;
   as->buf = (uint8_t*)buff;
-  as->bytesRead = br;
   as->fp = fp;
   
-  *br = 0;	// Clear read byte counter
-  res = validate(&fp->obj, &fs);				// Check validity of the file object
+  //*br = 0;	        
+  *as->pBytesRead = 0;  // Clear read byte counter
+  
+  
+  
+  res = validate(&fp->obj, &fs);        // Check validity of the file object
   if (res != FR_OK || (res = (FRESULT)fp->err) != FR_OK)
-    LEAVE_FF(fs, res);	// Check validity 
-  if (!(fp->flag & FA_READ))
-    LEAVE_FF(fs, FR_DENIED); // Check access mode
-  remain = fp->obj.objsize - fp->fptr;
-  if (btr > remain)
-    btr = (UINT)remain;		// Truncate btr by remaining bytes
+    LEAVE_FF(fs, res);
+  
+  if (!(fp->flag & FA_READ))            // Check access mode
+    LEAVE_FF(fs, FR_DENIED);
+  
+  if(fp->fptr == 0)                     // Start of file, 
+    as->bytesCached = 0;                // there're no cached data
+  
+  uint32_t remain = fp->obj.objsize - fp->fptr;  // Remaining data count
+  if (as->bytesToread > remain)
+  {
+    btr = remain;                       // Truncate btr by remaining bytes
+    as->bytesToread = remain;
+  }
+  
+  if(as->bytesCached)                   // Write cached data if any
+  {
+    uint32_t ncpy = as->bytesToread;    // Count...
+    if(ncpy > as->bytesCached)
+      ncpy = as->bytesCached;
+    
+    uint8_t* pCache = fp->buf + SS(fs) - as->bytesCached;       // Find...
+    memcpy((void*)as->buf, pCache, ncpy);                       // Write...
+    as->bytesCached -= ncpy;
+    as->bytesToread -= ncpy;
+    fp->fptr += ncpy;
+    as->buf += ncpy;
+    
+    if(as->bytesToread == 0)            // That's all?
+    {
+      as->result = FR_OK;
+      as->readComplete = 1;
+      LEAVE_FF(fs, FR_OK);
+    }
+  }
 
-
-  if (fp->fptr % SS(fs) == 0)
-  {			/* On the sector boundary? */
-    csect = (UINT)(fp->fptr / SS(fs) & (fs->csize - 1));	/* Sector offset in the cluster */
-    if (csect == 0)
-    {					/* On the cluster boundary? */
-      if (fp->fptr == 0)
-      {			/* On the top of the file? */
-        clst = fp->obj.sclust;		/* Follow cluster chain from the origin */
+  if (fp->fptr % SS(fs) == 0)           // On the sector boundary?
+  {			
+    csect = (UINT)(fp->fptr / SS(fs) & (fs->csize - 1));// Sector offset in the cluster
+    if (csect == 0)                     // On the cluster boundary?
+    {					
+      if (fp->fptr == 0)                // On the top of the file?
+      {	
+        clst = fp->obj.sclust;		// Follow cluster chain from the origin
       }
-      else
-      {						/* Middle or end of the file */
-#if _USE_FASTSEEK
-        if (fp->cltbl)
-        {
-          clst = clmt_clust(fp, fp->fptr);	/* Get cluster# from the CLMT */
-        }
-        else
-#endif
-        {
-          clst = get_fat(&fp->obj, fp->clust);	/* Follow cluster chain on the FAT */
-        }
+      else                              // Middle or end of the file
+      {						
+//#if _USE_FASTSEEK
+//        if (fp->cltbl)
+//        {
+//          clst = clmt_clust(fp, fp->fptr);	// Get cluster# from the CLMT
+//        }
+//        else
+//#endif
+//        {
+          clst = get_fat(&fp->obj, fp->clust);	// Follow cluster chain on the FAT
+//        }
       }
+      
       if (clst < 2) ABORT(fs, FR_INT_ERR);
       if (clst == 0xFFFFFFFF) ABORT(fs, FR_DISK_ERR);
-      fp->clust = clst;				/* Update current cluster */
+      fp->clust = clst;	                // Update current cluster
     }
-    sect = clust2sect(fs, fp->clust);	/* Get current sector */
-    if (!sect) ABORT(fs, FR_INT_ERR);
+    sect = clust2sect(fs, fp->clust);	// Get current sector
+    if (!sect)
+      ABORT(fs, FR_INT_ERR);
     sect += csect;
-    cc = btr / SS(fs);					/* When remaining bytes >= sector size, */
-    if (cc)
-    {							/* Read maximum contiguous sectors directly */
-      if (csect + cc > fs->csize)
-      {	/* Clip at cluster boundary */
+    
+    cc = as->bytesToread / SS(fs);	 // When remaining bytes >= sector size,
+    if (cc)                     // Read maximum contiguous sectors directly
+    {							
+      if (csect + cc > fs->csize)       // Clip at cluster boundary
+      {	
         cc = fs->csize - csect;
       }
       
-      if (adisk_read(fs->drv, rbuff, sect, cc) != RES_OK)
+      if (adisk_read(fs->drv, (BYTE*)as->buf, sect, cc) != RES_OK)
         ABORT(fs, FR_DISK_ERR);
-
-      	rcnt = SS(fs) * cc;				// Number of bytes transferred */
-        fp->fptr += rcnt;
     }
-    else
+    
+    else                        // Remaining bytes < sector size,
     {
-      if (fp->sect != sect)     // Load data sector if not in cache
-      {			
-        if (disk_read(fs->drv, fp->buf, sect, 1) != RES_OK)
-          ABORT(fs, FR_DISK_ERR);
-      }
-      fp->fptr += btr;
-      rcnt = SS(fs) - (UINT)fp->fptr % SS(fs);	/* Number of bytes left in the sector */
-//      mem_cpy(rbuff, fp->buf + fp->fptr % SS(fs), rcnt);	/* Extract partial sector */
+      if (adisk_read(fs->drv, fp->buf, sect, 1) != RES_OK)
+        ABORT(fs, FR_DISK_ERR);
     }
-    fp->sect = sect;
   }
-//  rcnt = SS(fs) - (UINT)fp->fptr % SS(fs);	/* Number of bytes left in the sector */
-//  if (rcnt > btr) rcnt = btr;					/* Clip it by btr if needed */
-//#if _FS_TINY
-//		if (move_window(fs, fp->sect) != FR_OK) ABORT(fs, FR_DISK_ERR);	/* Move sector window */
-//		mem_cpy(rbuff, fs->win + fp->fptr % SS(fs), rcnt);	/* Extract partial sector */
-//#else
-//		mem_cpy(rbuff, fp->buf + fp->fptr % SS(fs), rcnt);	/* Extract partial sector */
-//#endif
-//  }
-//  rbuff += rcnt;
-//  fp->fptr += rcnt;
-//  *br += rcnt;
-//  btr -= rcnt;
-                
-         
+     
   LEAVE_FF(fs, FR_OK);
-  return FR_OK;
 }
 
 //------------------------------------------------------------------------------
@@ -209,15 +221,26 @@ extern "C" void DMA1_Channel2_3_IRQHandler()
   // Discard crc
   rcvr_spi();
   rcvr_spi();
-
+  
+  // Last sector in cluster?
+  
+  
+  as->fp->sect % as->fp->obj.fs->csize;
+  as->fp->fptr += 512;
+  as->bytesToread -= 512;
+  //as->fp->sect ++;
+  *as->pBytesRead += 512;
   uint32_t blocksRead = ++as->blocksRead;
+  
   if(blocksRead < as->blocksToRead)
     Dma_Cont_Rd();
+  else if(*as->pBytesRead < as->bytesToread)
+    Dma_Cont_Rd(as->fp->buf);
   else
     Dma_Stop_Rd();
 }
 //------------------------------------------------------------------------------
-void Dma_Cont_Rd()
+void Dma_Cont_Rd(uint8_t* cache)
 {
   if(!Wait_DataMarker())
   {
@@ -225,12 +248,20 @@ void Dma_Cont_Rd()
     as->result = FR_DISK_ERR;
     return;
   }
-
-  as->buf += 512;
-  DMA_Channel_SPI_SD_RX->CMAR += 512;
+  if(cache != NULL)     // Read in cache
+  {
+    DMA_Channel_SPI_SD_RX->CMAR = (uint32_t)cache;
+    as->bytesCached = 512;
+  }
+  else                  // Read directly in buffer
+  {
+    as->buf += 512;
+    DMA_Channel_SPI_SD_RX->CMAR += 512;
+  }
+  
+  // Reload data counters
   DMA_Channel_SPI_SD_RX->CNDTR = 512;
   DMA_Channel_SPI_SD_TX->CNDTR = 512;
-
   // Enable DMA RX Channel
   DMA_Cmd(DMA_Channel_SPI_SD_RX, ENABLE);
   // Enable DMA TX Channel
@@ -248,8 +279,26 @@ void Dma_Stop_Rd()
 
   send_cmd(CMD12, 0);           // STOP_TRANSMISSION
   release_spi();
+  
+  if(as->bytesCached)           // Write remaining data
+  {
+    as->fp->fptr -= 512;
+    *as->pBytesRead -=512;
+    //as->bytesToread -= 512;
+    
+    uint32_t ncpy = as->bytesToread;
+    ncpy -= *as->pBytesRead;
+    memcpy((void*)as->buf, as->fp->buf, ncpy);
+    as->fp->fptr += ncpy;
+    as->bytesCached -= ncpy;
+    *as->pBytesRead += ncpy;
+    as->buf += ncpy;
+  }
+  as->result = FR_OK;
   as->readComplete = 1;
 }
+
+
 
 
 

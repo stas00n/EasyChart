@@ -5,6 +5,7 @@
 #include "ffasync.h"
 #include "integer.h"
 #include <stdint.h>
+#include <string.h>
 #include "diskio.h"
 #include "stm32f0xx_conf.h"
 
@@ -14,13 +15,14 @@ typedef struct
   volatile uint32_t blocksToRead;
   volatile uint32_t blocksRead;
   volatile uint32_t bytesToread;
-  volatile uint32_t* bytesRead;
+  volatile uint32_t* pBytesRead;
   volatile uint8_t* buf;
   volatile FRESULT result;
   FIL* fp;
+  volatile uint32_t bytesCached;
 }ASYNCIO_T;
 
-void Dma_Cont_Rd();
+void Dma_Cont_Rd(uint8_t* cache = NULL);
 void Dma_Stop_Rd();
 
 // Definitions for MMC/SDC command
@@ -97,7 +99,7 @@ void Dma_Stop_Rd();
 #endif
 
 
-FRESULT f_aread(FIL* fp, void* buff, UINT btr, UINT* br, ASYNCIO_T* asyncio);
+FRESULT f_aread(FIL* fp, void* buff, UINT btr,/* UINT* br,*/ ASYNCIO_T* asyncio);
 
 DRESULT adisk_read(BYTE drv, BYTE* buff, DWORD sector, BYTE count);
 bool Wait_DataMarker();

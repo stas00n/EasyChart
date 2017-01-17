@@ -40,7 +40,7 @@ void main()
 
   // Allocate double buffer for async operation
   uint8_t* dblbuf[2];
-  const int bufsize = 20;
+  const int bufsize = 550;
   dblbuf[0] = (uint8_t*)malloc(bufsize);
   dblbuf[1] = (uint8_t*)malloc(bufsize);
 #ifdef DEBUG
@@ -71,9 +71,9 @@ void main()
     uint8_t sw;                // Buffers switch
     sw = 0;
     
-    f_aread(&f, dblbuf[sw], bufsize, &br, &asyncio);
+    f_aread(&f, dblbuf[sw], bufsize, /*&br,*/ &asyncio);
     while(!asyncio.readComplete);
-    f_aread(&f, dblbuf[sw ^ 1], bufsize, &br, &asyncio);
+    f_aread(&f, dblbuf[sw ^ 1], bufsize,/* &br,*/ &asyncio);
     
     uint8_t* pos = myf.Draw_MYF_Start(dblbuf[sw], bufsize, 0, 0);
 
@@ -83,7 +83,7 @@ void main()
       sw &= 1;
       
       while(!asyncio.readComplete);
-      f_aread(&f, dblbuf[sw ^ 1], bufsize, &br, &asyncio);
+      f_aread(&f, dblbuf[sw ^ 1], bufsize,/* &br,*/ &asyncio);
       pos = myf.Draw_MYF_Continue(dblbuf[sw], bufsize);
     }
     f_close(&f);
