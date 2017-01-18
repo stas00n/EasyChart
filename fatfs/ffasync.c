@@ -95,7 +95,11 @@ FRESULT f_aread(FIL* fp, void* buff, UINT btr, /*UINT* br,*/ ASYNCIO_T* asyncio)
   as->fp = fp;
   
   //*br = 0;	        
+<<<<<<< HEAD
   as->bytesRead = 0;  // Clear read byte counter
+=======
+  *as->pBytesRead = 0;  // Clear read byte counter
+>>>>>>> f51ce0c6bbbbced61c2b65e75b14fe06774b20e6
   
   
   
@@ -148,6 +152,7 @@ FRESULT f_aread(FIL* fp, void* buff, UINT btr, /*UINT* br,*/ ASYNCIO_T* asyncio)
       }
       else                              // Middle or end of the file
       {						
+<<<<<<< HEAD
 #if _USE_FASTSEEK
         if (fp->cltbl)
         {
@@ -158,6 +163,18 @@ FRESULT f_aread(FIL* fp, void* buff, UINT btr, /*UINT* br,*/ ASYNCIO_T* asyncio)
         {
           clst = get_fat(&fp->obj, fp->clust);	// Follow cluster chain on the FAT
         }
+=======
+//#if _USE_FASTSEEK
+//        if (fp->cltbl)
+//        {
+//          clst = clmt_clust(fp, fp->fptr);	// Get cluster# from the CLMT
+//        }
+//        else
+//#endif
+//        {
+          clst = get_fat(&fp->obj, fp->clust);	// Follow cluster chain on the FAT
+//        }
+>>>>>>> f51ce0c6bbbbced61c2b65e75b14fe06774b20e6
       }
       
       if (clst < 2) ABORT(fs, FR_INT_ERR);
@@ -170,6 +187,7 @@ FRESULT f_aread(FIL* fp, void* buff, UINT btr, /*UINT* br,*/ ASYNCIO_T* asyncio)
     sect += csect;
     
     cc = as->bytesToread / SS(fs);	 // When remaining bytes >= sector size,
+<<<<<<< HEAD
     if (csect + cc > fs->csize)       // Clip at cluster boundary
     {	
       cc = fs->csize - csect;
@@ -182,6 +200,15 @@ FRESULT f_aread(FIL* fp, void* buff, UINT btr, /*UINT* br,*/ ASYNCIO_T* asyncio)
       cc++;
     if (cc)   // Read maximum contiguous sectors directly
     {							
+=======
+    if (cc)                     // Read maximum contiguous sectors directly
+    {							
+      if (csect + cc > fs->csize)       // Clip at cluster boundary
+      {	
+        cc = fs->csize - csect;
+      }
+      
+>>>>>>> f51ce0c6bbbbced61c2b65e75b14fe06774b20e6
       if (adisk_read(fs->drv, (BYTE*)as->buf, sect, cc) != RES_OK)
         ABORT(fs, FR_DISK_ERR);
     }
@@ -227,6 +254,7 @@ extern "C" void DMA1_Channel2_3_IRQHandler()
   rcvr_spi();
   rcvr_spi();
   
+<<<<<<< HEAD
   as->remFullSects--;
   
   
@@ -240,6 +268,21 @@ extern "C" void DMA1_Channel2_3_IRQHandler()
   if(as->remFullSects)
     Dma_Cont_Rd();
   else if(as->remBytes)
+=======
+  // Last sector in cluster?
+  
+  
+  as->fp->sect % as->fp->obj.fs->csize;
+  as->fp->fptr += 512;
+  as->bytesToread -= 512;
+  //as->fp->sect ++;
+  *as->pBytesRead += 512;
+  uint32_t blocksRead = ++as->blocksRead;
+  
+  if(blocksRead < as->blocksToRead)
+    Dma_Cont_Rd();
+  else if(*as->pBytesRead < as->bytesToread)
+>>>>>>> f51ce0c6bbbbced61c2b65e75b14fe06774b20e6
     Dma_Cont_Rd(as->fp->buf);
   else
     Dma_Stop_Rd();
@@ -288,6 +331,7 @@ void Dma_Stop_Rd()
   if(as->bytesCached)           // Write remaining data
   {
     as->fp->fptr -= 512;
+<<<<<<< HEAD
     as->bytesRead -=512;
     //as->bytesToread -= 512;
     
@@ -297,6 +341,17 @@ void Dma_Stop_Rd()
     as->fp->fptr += ncpy;
     as->bytesCached -= ncpy;
     as->bytesRead += ncpy;
+=======
+    *as->pBytesRead -=512;
+    //as->bytesToread -= 512;
+    
+    uint32_t ncpy = as->bytesToread;
+    ncpy -= *as->pBytesRead;
+    memcpy((void*)as->buf, as->fp->buf, ncpy);
+    as->fp->fptr += ncpy;
+    as->bytesCached -= ncpy;
+    *as->pBytesRead += ncpy;
+>>>>>>> f51ce0c6bbbbced61c2b65e75b14fe06774b20e6
     as->buf += ncpy;
   }
   as->result = FR_OK;
