@@ -16,11 +16,7 @@ typedef struct
   volatile uint32_t blocksToRead;
   volatile uint32_t blocksRead;
   volatile uint32_t bytesToread;
-<<<<<<< HEAD
   volatile uint32_t bytesRead;
-=======
-  volatile uint32_t* pBytesRead;
->>>>>>> f51ce0c6bbbbced61c2b65e75b14fe06774b20e6
   volatile uint8_t* buf;
   volatile FRESULT result;
   uint32_t      remFullSects;
