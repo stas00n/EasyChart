@@ -321,6 +321,7 @@ static BYTE stm32_spi_rw( BYTE out )
 
 inline BYTE rcvr_spi (void)
 {
+  while (SPI_I2S_GetFlagStatus(SPI1, SPI_I2S_FLAG_TXE) == RESET);
   SPI1_DR8 = 0xFF;
   while (SPI_I2S_GetFlagStatus(SPI_SD, SPI_I2S_FLAG_RXNE) == RESET) { ; }
   return SPI1_DR8;

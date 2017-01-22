@@ -4,7 +4,7 @@ CLCD lcd;
 CMYF myf;
 
 ASYNCIO_T asyncio;
-
+void* FastSeek(FIL* fp);
 void main()
 {
   Clock_Config();
@@ -25,7 +25,7 @@ void main()
   con.x = 0; con.y = 0;
   FRESULT fresult;
   FATFS fs;
-  uint8_t retry = 10;
+  uint8_t retry = 5;
   while(retry--)
   {
     fresult = f_mount(&fs, "0", 1);
@@ -40,7 +40,7 @@ void main()
 
   // Allocate double buffer for async operation
   uint8_t* dblbuf[2];
-  const int bufsize = 1100;
+  const int bufsize = 2048;
   dblbuf[0] = (uint8_t*)malloc(bufsize);
   dblbuf[1] = (uint8_t*)malloc(bufsize);
 #ifdef DEBUG
@@ -72,32 +72,56 @@ void main()
 //  rect.height = 1;
   
 //  lcd.Clear();
+  DWORD nDiskErrors = 0;
   FIL f;
   while(1)
   {
     
     fresult = f_open(&f, "2.myf", FA_READ | FA_OPEN_EXISTING);
     if(fresult != FR_OK) continue;
-    UINT br = 1;//заглушка пока что
+    
+    void* fastSeekHandle = FastSeek(&f);
 
     uint8_t sw;                // Buffers switch
     sw = 0;
     
     f_aread(&f, dblbuf[sw], bufsize, /*&br,*/ &asyncio);
-    while(!asyncio.readComplete);
+    while(asyncio.result == FR_BUSY);
+    if(asyncio.result != FR_OK)
+      // TODO: Why DISK_ERR?
+      //  while(1);
+    {
+      nDiskErrors++;
+      if(fastSeekHandle);
+        free(fastSeekHandle);
+      f_close(&f);
+      lcd.Clear();
+      continue;
+    }
     f_aread(&f, dblbuf[sw ^ 1], bufsize,/* &br,*/ &asyncio);
-    
+//    f_read(&f, dblbuf[sw], bufsize, &br);
+//    f_read(&f, dblbuf[sw ^ 1], bufsize, &br);
     uint8_t* pos = myf.Draw_MYF_Start(dblbuf[sw], bufsize, 0, 0);
 
-    while(br)
+    while(asyncio.bytesRead)
     {
       sw++;                     // Toggle buffers
       sw &= 1;
       
-      while(!asyncio.readComplete);
+      while(asyncio.result == FR_BUSY);
+      if(asyncio.result != FR_OK)
+      {
+        nDiskErrors++;
+        break;
+      }
+        // TODO: Why DISK_ERR?
+        //while(1);
       f_aread(&f, dblbuf[sw ^ 1], bufsize,/* &br,*/ &asyncio);
+      //f_read(&f, dblbuf[sw ^ 1], bufsize, &br);
       pos = myf.Draw_MYF_Continue(dblbuf[sw], bufsize);
     }
+    if(fastSeekHandle);
+      free(fastSeekHandle);
     f_close(&f);
     lcd.Clear();
     
@@ -198,4 +222,26 @@ void scrlV(PIXELPOINT_T* pt, signed char dy)
     pt->tile_y -= 1;
   }
   pt->tile_pixl_y = t;
+}
+
+
+void* FastSeek(FIL* fp)
+{
+  uint32_t nClust = fp->obj.objsize / (fp->obj.fs->csize * 512) + 1;
+  uint32_t size32 = (nClust << 2) + 2;
+  uint32_t* clmt = (uint32_t*)malloc(size32 << 2);
+  
+  if(clmt)
+  {
+    fp->cltbl = (DWORD*)clmt;
+    clmt[0] = size32;                                 // Set table size
+    FRESULT res = f_lseek(fp, CREATE_LINKMAP);        // Create CLMT
+    if(res != FR_OK)
+    {
+      free(clmt);
+      return NULL;
+    }
+  }
+  
+  return clmt;
 }

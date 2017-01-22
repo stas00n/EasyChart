@@ -12,17 +12,16 @@
 // TODO: unvolatile if not need
 typedef struct
 {
-  volatile bool readComplete;
-  volatile uint32_t blocksToRead;
-  volatile uint32_t blocksRead;
-  volatile uint32_t bytesToread;
-  volatile uint32_t bytesRead;
-  volatile uint8_t* buf;
+  uint32_t bytesToread;
+  uint32_t bytesRead;
+  uint8_t* buf;
   volatile FRESULT result;
-  uint32_t      remFullSects;
-  uint16_t      remBytes;
+  uint32_t      remBytes;
   FIL* fp;
-  volatile uint32_t bytesCached;
+  uint32_t sect;
+  uint32_t clust;
+  uint32_t clustPrev;
+  uint32_t bytesCached;
 }ASYNCIO_T;
 
 void Dma_Cont_Rd(uint8_t* cache = NULL);
