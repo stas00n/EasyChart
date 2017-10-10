@@ -362,8 +362,8 @@ BYTE wait_ready (void)
 extern "C"
 void release_spi (void)
 {
-	DESELECT();
-	rcvr_spi();
+  DESELECT();
+  rcvr_spi();
 }
 
 #ifdef STM32_SD_USE_DMA
@@ -615,23 +615,23 @@ BOOL xmit_datablock (
 
 	if (wait_ready() != 0xFF) return FALSE;
 
-	xmit_spi(token);					/* transmit data token */
+	xmit_spi(token);	/* transmit data token */
 	if (token != 0xFD) {	/* Is data token */
 
 #ifdef STM32_SD_USE_DMA
 		stm32_dma_transfer( FALSE, buff, 512 );
 #else
 		wc = 0;
-		do {							/* transmit the 512 byte data block to MMC */
+		do {	        /* transmit the 512 byte data block to MMC */
 			xmit_spi(*buff++);
 			xmit_spi(*buff++);
 		} while (--wc);
 #endif /* STM32_SD_USE_DMA */
 
-		xmit_spi(0xFF);					/* CRC (Dummy) */
+		xmit_spi(0xFF);	                /* CRC (Dummy) */
 		xmit_spi(0xFF);
-		resp = rcvr_spi();				/* Receive data response */
-		if ((resp & 0x1F) != 0x05)		/* If not accepted, return with error */
+		resp = rcvr_spi();              /* Receive data response */
+		if ((resp & 0x1F) != 0x05)      /* If not accepted, return with error */
 			return FALSE;
 	}
 
@@ -682,7 +682,7 @@ BYTE send_cmd (
 	/* Receive command response */
 	if (cmd == CMD12) rcvr_spi();		/* Skip a stuff byte when stop reading */
 
-	n = 10;								/* Wait for a valid response in timeout of 10 attempts */
+	n = 10;		        /* Wait for a valid response in timeout of 10 attempts */
 	do
 		res = rcvr_spi();
 	while ((res & 0x80) && --n);
@@ -712,7 +712,7 @@ DSTATUS disk_initialize (
 	if (drv) return STA_NOINIT;			/* Supports only single drive */
 	if (Stat & STA_NODISK) return Stat;	/* No card in the socket */
 
-	power_on();							/* Force socket power on and initialize interface */
+	power_on();				        /* Force socket power on and initialize interface */
 	interface_speed(INTERFACE_SLOW);
 	for (n = 10; n; n--) rcvr_spi();	/* 80 dummy clocks */
 

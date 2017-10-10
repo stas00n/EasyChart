@@ -1,5 +1,4 @@
 #include "ffasync.h"
-#include "timing.h"
 
 ASYNCIO_T* as;
 extern DSTATUS Stat;
@@ -177,29 +176,17 @@ FRESULT f_aread(FIL* fp, void* buff, UINT btr, /*UINT* br,*/ ASYNCIO_T* asyncio)
     sect += csect;
     
     cc = as->remBytes / SS(fs);	 // When remaining bytes >= sector size,
-//    if (csect + cc > fs->csize)       // Clip at cluster boundary
-//    {	
-//      cc = fs->csize - csect;
-//    }
-    //as->remFullSects = cc;
-//    as->remBytes = as->bytesToread - cc * SS(fs);
-//    if(as->remBytes >= SS(fs))
-//      as->remBytes = 0;
-//    if(as->remBytes)
-//      cc++;
     if (cc && (as->bytesToread - as->bytesRead) >= 512)   // Read maximum contiguous sectors directly
     {							
-
       if (adisk_read(fs->drv, (BYTE*)as->buf, sect, cc) != RES_OK)
       {
         as->result = FR_DISK_ERR;
         ABORT(fs, FR_DISK_ERR);
       }
     }
-    
     else                        // Remaining bytes < sector size,
     {
-      as->bytesCached = 512;
+      as->bytesCached = 512;    // Read data in cache
       if (adisk_read(fs->drv, fp->buf, sect, 1) != RES_OK)
       {
         as->result = FR_DISK_ERR;
@@ -207,7 +194,6 @@ FRESULT f_aread(FIL* fp, void* buff, UINT btr, /*UINT* br,*/ ASYNCIO_T* asyncio)
       }
     }
   }
-     
   LEAVE_FF(fs, FR_OK);
 }
 
@@ -228,6 +214,7 @@ void mem_cpy (void* dst, const void* src, UINT cnt)
 //------------------------------------------------------------------------------
 extern "C" void DMA1_Channel2_3_IRQHandler()
 {
+  // Stop DMA
   DMA_ClearFlag(DMA1_FLAG_GL2 |
                 DMA1_FLAG_TC2 |
                 DMA1_FLAG_HT2 |
@@ -244,87 +231,78 @@ extern "C" void DMA1_Channel2_3_IRQHandler()
   
   as->bytesRead += 512;
   as->fp->fptr += 512;
-  if(as->bytesRead >= as->bytesToread)
+  if(as->bytesRead >= as->bytesToread)          // Enough..
   {
     Dma_Stop_Rd();
     return;
   }
-  //-------------
-  bool cont = 1;
-  bool partial = (as->bytesRead + 512 > as->bytesToread); // partial next  sector read?
-  //if(as->fp->fptr + 512 <= as->bytesToread)
-  
-  //as->sect++;
-  if (as->fp->fptr % SS(fs) == 0)           // On the sector boundary?
+
+  bool cont = 1;                                // Contiguos clusters
+  bool partial = (as->bytesRead + 512 > as->bytesToread); // partial next sector read?
+
+  if (as->fp->fptr % SS(fs) == 0)               // On the sector boundary?
   {
-    as->sect = (UINT)(as->fp->fptr / SS(fs) & (as->fp->obj.fs->csize - 1));// Sector offset in the cluster
-    if (as->sect == 0)                     // On the cluster boundary?
-    {					
-      
-      // Middle or end of the file
-      
+    // Sector offset in the cluster
+    as->sect = (UINT)(as->fp->fptr / SS(fs) & (as->fp->obj.fs->csize - 1));
+    if (as->sect == 0)                          // On the cluster boundary?
+    {					        // Middle or end of the file
 #if _USE_FASTSEEK
-      if (!as->fp->cltbl)         // Not valid cluster table
+      if (!as->fp->cltbl)         // Error - not valid cluster table
       {
         as->result = FR_INT_ERR;
         as->fp->err = FR_INT_ERR;
         return;
-        //    ABORT(fs, FR_INT_ERR);
+        // ABORT(fs, FR_INT_ERR);
       }
       as->clust = clmt_clust(as->fp, as->fp->fptr);
-      //        }
 #else
 #error Async read working only with _USE_FASTSEEK option enabled - edit "ffconf.h"
-      //        else
 #endif
-      //        {
-      //          clst = get_fat(&fp->obj, fp->clust);	// Follow cluster chain on the FAT
-      //        }
-      
-      
-      
+
       if (as->clust < 2)
       {
         as->result = FR_INT_ERR;
         as->fp->err = FR_INT_ERR;
         return;
-        //    ABORT(fs, FR_INT_ERR);
+        // ABORT(fs, FR_INT_ERR);
       }
       if (as->clust == 0xFFFFFFFF)
       {
         as->result = FR_DISK_ERR;
         as->fp->err = FR_DISK_ERR;
         return;
-        //ABORT(fs, FR_DISK_ERR);
+        // ABORT(fs, FR_DISK_ERR);
       }
-      as->fp->clust = as->clust;	                // Update current cluster
-      cont = (as->clust == as->clustPrev + 1); // Continue read;
-      as->clustPrev = as->clust;
+      as->fp->clust = as->clust;	        // Update current cluster
+      cont = (as->clust == as->clustPrev + 1);  // Contiguos clusters?
+      as->clustPrev = as->clust;                // Remember cluster
     }
-    as->sect = clust2sect(as->fp->obj.fs, as->fp->clust);	// Get current sector
+    as->sect = clust2sect(as->fp->obj.fs, as->fp->clust);       // Get current sector
     
     if (!as->sect)
     {
       //ABORT(as->fp->obj.fs, FR_INT_ERR);
       as->result = FR_INT_ERR;
+      as->fp->err = FR_INT_ERR;
       return;
     }
-  }  
-  if(!cont)
-  {
-    send_cmd(CMD12, 0);           // STOP_TRANSMISSION
-    release_spi();
-    send_cmd(CMD18, as->sect);
+
+    if(!cont)                     // Not contigous next cluster (fragmented file)
+    {
+      send_cmd(CMD12, 0);         // STOP_TRANSMISSION
+      release_spi();
+      send_cmd(CMD18, as->sect);  // Start read from next fragment
+    }
   }
   
-  
-  if(as->bytesRead < as->bytesToread && !partial)
+  if((as->bytesRead < as->bytesToread) && !partial)
     Dma_Cont_Rd();
   else if(partial)
     Dma_Cont_Rd(as->fp->buf);
   else
     Dma_Stop_Rd();
 }
+
 //------------------------------------------------------------------------------
 void Dma_Cont_Rd(uint8_t* cache)
 {
@@ -370,18 +348,46 @@ void Dma_Stop_Rd()
   if(as->bytesCached)           // Write remaining data
   {
     as->fp->fptr -= 512;
-    as->bytesRead -=512;
+    as->bytesRead -= 512;
     
-    uint32_t ncpy = as->bytesToread;
-    ncpy -= as->bytesRead;
+    uint32_t ncpy = as->bytesToread - as->bytesRead;
     memcpy((void*)as->buf, as->fp->buf, ncpy);
     as->fp->fptr += ncpy;
     as->bytesCached -= ncpy;
     as->bytesRead += ncpy;
-
     as->buf += ncpy;
   }
   as->result = FR_OK;
+}
+
+//------------------------------------------------------------------------------
+void* FastSeek(FIL* fp)
+{
+  // File max cluster count
+  uint32_t nClust = fp->obj.objsize / (fp->obj.fs->csize * 512) + 1;
+  
+  // required 2 dwords per cluster + 2
+  uint32_t size32 = (nClust << 1) + 2;
+  
+  // Try alloc buffer
+  uint32_t* clmt = (uint32_t*)malloc(size32 << 2);
+  
+  if(clmt)              // Successful buffer allocation
+  {
+    fp->cltbl = (DWORD*)clmt;
+    clmt[0] = size32;                                 // Set table size
+    FRESULT res = f_lseek(fp, CREATE_LINKMAP);        // Create CLMT
+    if(res != FR_OK)    // Failed..
+    {
+      fp->cltbl = NULL;
+      free(clmt);
+      return NULL;
+    }
+  }
+  else                  // Not enough memory..         
+    fp->cltbl = NULL;
+  
+  return clmt;          // OK. Dont forget to free() when closing file 
 }
 
 

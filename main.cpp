@@ -4,7 +4,7 @@ CLCD lcd;
 CMYF myf;
 
 ASYNCIO_T asyncio;
-void* FastSeek(FIL* fp);
+
 void main()
 {
   Clock_Config();
@@ -225,23 +225,4 @@ void scrlV(PIXELPOINT_T* pt, signed char dy)
 }
 
 
-void* FastSeek(FIL* fp)
-{
-  uint32_t nClust = fp->obj.objsize / (fp->obj.fs->csize * 512) + 1;
-  uint32_t size32 = (nClust << 2) + 2;
-  uint32_t* clmt = (uint32_t*)malloc(size32 << 2);
-  
-  if(clmt)
-  {
-    fp->cltbl = (DWORD*)clmt;
-    clmt[0] = size32;                                 // Set table size
-    FRESULT res = f_lseek(fp, CREATE_LINKMAP);        // Create CLMT
-    if(res != FR_OK)
-    {
-      free(clmt);
-      return NULL;
-    }
-  }
-  
-  return clmt;
-}
+

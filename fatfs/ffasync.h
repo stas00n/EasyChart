@@ -6,10 +6,11 @@
 #include "integer.h"
 #include <stdint.h>
 #include <string.h>
+#include <stdlib.h>
 #include "diskio.h"
 #include "stm32f0xx_conf.h"
 
-// TODO: unvolatile if not need
+// Async Read Struct
 typedef struct
 {
   uint32_t bytesToread;
@@ -26,6 +27,8 @@ typedef struct
 
 void Dma_Cont_Rd(uint8_t* cache = NULL);
 void Dma_Stop_Rd();
+
+void* FastSeek(FIL* fp);
 
 // Definitions for MMC/SDC command
 #define CMD0	(0x40+0)	// GO_IDLE_STATE
